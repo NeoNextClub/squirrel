@@ -139,11 +139,7 @@ func GetGoroutines() int {
 
 // LoadAliyunMailConfig performs a basic check on aliyun mail config.
 func LoadAliyunMailConfig() error {
-	if err := checkAliyunMail(); err != nil {
-		return err
-	}
-
-	return nil
+	return checkAliyunMail()
 }
 
 // GetAliyunMailConfig returns aliyun mail configs.
