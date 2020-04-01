@@ -24,6 +24,7 @@ type RawState struct {
 	Value interface{} `json:"value"`
 }
 
+// GetArray returns RawStack array from RawState.
 func (rawState *RawState) GetArray() []RawStack {
 	if rawState.Type != "Array" {
 		return nil

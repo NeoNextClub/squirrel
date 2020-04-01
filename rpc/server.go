@@ -74,6 +74,7 @@ func serverUnavailable(url string) {
 	}
 }
 
+// PrintServerStatus prints rpc host with its current best height.
 func PrintServerStatus() {
 	sLock.Lock()
 	defer sLock.Unlock()
