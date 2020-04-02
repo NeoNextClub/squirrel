@@ -17,6 +17,8 @@ UPDATE `counter` SET
 WHERE `id` = 1;
 UPDATE `asset` SET `addresses` = 0, `available` = 0, `transactions` = 0;
 UPDATE `address` SET `trans_asset` = 0;
+TRUNCATE TABLE `asset_tx`;
+UPDATE `counter` SET `last_asset_tx_pk` = 0 WHERE `id` = 1;
 
 */
 

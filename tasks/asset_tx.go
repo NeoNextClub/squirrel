@@ -1,13 +1,3 @@
-/*
-To restart this task from beginning, execute the following sqls:
-
-TRUNCATE TABLE `asset_tx`;
-UPDATE `counter` SET
-	`last_asset_tx_pk` = 0,
-WHERE `id` = 1;
-
-*/
-
 package tasks
 
 import (
