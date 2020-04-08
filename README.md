@@ -41,6 +41,10 @@ vim config/config.json
 4. Build source code and run:
 
 ```bash
+# For go 1.13 and above, the following go proxy is recommended:
+# go env -w GOPROXY=https://goproxy.cn,direct
+# Visit https://goproxy.cn for detailed info.
+
 # Install dependencies and build binary
 go get -v -t ./... && go build
 # Run squirrel, you can attach -mail flag to enable mail alert.
@@ -63,7 +67,7 @@ Currently there are 3 individual tasks except the main block data sync task:
 * UTXO Transfers Sync Task.
 * gas Daily Balance sync Task.
 
-If you want to add extra columns or make some changes to the existing tables that being used by these tasks, 
+If you want to add extra columns or make some changes to the existing tables that being used by these tasks,
 then you may want to restart these tasks from beginning,
 to clear these related tables/data, run the following sqls:
 
