@@ -58,7 +58,7 @@ Here is the space size used on different networks(for reference) under MySQL 5.7
 | Network      | Block Height | Size  |
 | ------------ |:------------:| -----:|
 | Mainnet      | 5,320,000    | ~156G |
-| TestNet      | 4,070,000    | ~51G  |
+| TestNet      | 4,070,000    | ~27G  |
 
 ## Reset Sync Tasks
 
