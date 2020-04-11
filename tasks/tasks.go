@@ -33,8 +33,6 @@ func Run() {
 	go startUpdateCounterTask()
 	go startAssetTxTask()
 	go startGasBalanceTask()
-
-	go rpc.TraceBestHeight()
 }
 
 func initTask(dbHeight int) {
@@ -42,6 +40,6 @@ func initTask(dbHeight int) {
 	bestHeight := rpc.RefreshServers()
 
 	log.Printf("Current params for block persistance:\n")
-	log.Printf("db block height = %d\n", dbHeight)
-	log.Printf("rpc best height = %d\n", bestHeight)
+	log.Printf("\tdb block height = %d\n", dbHeight)
+	log.Printf("\trpc best height = %d\n", bestHeight)
 }

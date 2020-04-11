@@ -80,13 +80,20 @@ func PrintServerStatus() {
 	defer sLock.Unlock()
 
 	for host, height := range servers {
-		fmt.Printf("%s: %d\n", host, height)
+		if height < 0 {
+			fmt.Printf("%s: %s\n", host, util.BRed("Failed to get server height"))
+		} else {
+			fmt.Printf("%s: %d\n", host, height)
+		}
 	}
 }
 
 // TraceBestHeight starts a.
 func TraceBestHeight() {
 	defer mail.AlertIfErr()
+
+	RefreshServers()
+	PrintServerStatus()
 
 	for {
 		RefreshServers()

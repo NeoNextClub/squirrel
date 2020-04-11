@@ -7,6 +7,7 @@ import (
 	"squirrel/db"
 	"squirrel/log"
 	"squirrel/mail"
+	"squirrel/rpc"
 	"squirrel/tasks"
 )
 
@@ -25,6 +26,8 @@ func main() {
 	mail.Init(enableMail)
 
 	defer mail.AlertIfErr()
+
+	go rpc.TraceBestHeight()
 
 	tasks.Run()
 
