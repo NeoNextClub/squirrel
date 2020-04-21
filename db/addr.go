@@ -66,24 +66,23 @@ func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, asse
 			log.Error.Printf("TxID: %s, addr=%s, assetType=%s\n", txID, addr, assetType)
 			return err
 		}
-	} else {
-		query := fmt.Sprintf("UPDATE `address` SET `trans_asset` = `trans_asset` + %d, `trans_nep5` = `trans_nep5` + %d", incrAsset, incrNep5)
-		// Because task tx and task nep5 run in parallel,
-		// maybe one task executes before the other one with a bigger blockTime.
-		if addrCache.UpdateCreatedTime(blockTime) {
-			query += fmt.Sprintf(", `created_at` = %d", blockTime)
-		}
-		if addrCache.UpdateLastTxTime(blockTime) {
-			query += fmt.Sprintf(", `last_transaction_time` = %d", blockTime)
-		}
-		query += fmt.Sprintf(" WHERE `address` = '%s' LIMIT 1", addr)
 
-		_, err := tx.Exec(query)
-		if err != nil {
-			return err
-		}
+		return incrAddrCounter(tx)
 	}
-	return nil
+
+	query := fmt.Sprintf("UPDATE `address` SET `trans_asset` = `trans_asset` + %d, `trans_nep5` = `trans_nep5` + %d", incrAsset, incrNep5)
+	// Because task tx and task nep5 runs in parallel,
+	// maybe one task executes before the other one with a bigger blockTime.
+	if addrCache.UpdateCreatedTime(blockTime) {
+		query += fmt.Sprintf(", `created_at` = %d", blockTime)
+	}
+	if addrCache.UpdateLastTxTime(blockTime) {
+		query += fmt.Sprintf(", `last_transaction_time` = %d", blockTime)
+	}
+	query += fmt.Sprintf(" WHERE `address` = '%s' LIMIT 1", addr)
+
+	_, err := tx.Exec(query)
+	return err
 }
 
 func createAddrInfoIfNotExist(tx *sql.Tx, blockTime uint64, addr string) error {
@@ -95,6 +94,8 @@ func createAddrInfoIfNotExist(tx *sql.Tx, blockTime uint64, addr string) error {
 			log.Error.Printf("addr=%s\n", addr)
 			return err
 		}
+
+		return incrAddrCounter(tx)
 	}
 
 	return nil

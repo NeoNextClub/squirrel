@@ -136,6 +136,7 @@ create table counter
     app_log_idx            int          not null,
     nep5_tx_pk_for_addr_tx int unsigned not null,
     last_tx_pk_gas_balance int unsigned not null,
+    cnt_addr               int unsigned not null,
     cnt_tx_reg             int unsigned not null,
     cnt_tx_miner           int unsigned not null,
     cnt_tx_issue           int unsigned not null,

@@ -16,6 +16,7 @@ type Counter struct {
 	AppLogIdx          int
 	Nep5TxPkForAddrTx  uint
 	LastTxPkGasBalacne uint
+	CntAddr            uint
 	CntTxReg           uint
 	CntTxMiner         uint
 	CntTxIssue         uint
@@ -42,6 +43,7 @@ func initCounterInstance() Counter {
 		AppLogIdx:          -1,
 		Nep5TxPkForAddrTx:  0,
 		LastTxPkGasBalacne: 0,
+		CntAddr:            0,
 		CntTxReg:           0,
 		CntTxMiner:         0,
 		CntTxIssue:         0,
@@ -51,7 +53,7 @@ func initCounterInstance() Counter {
 		CntTxPublish:       0,
 		CntTxEnrollment:    0,
 	}
-	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	_, err := db.Exec(query,
 		c.ID,
@@ -62,6 +64,7 @@ func initCounterInstance() Counter {
 		c.AppLogIdx,
 		c.Nep5TxPkForAddrTx,
 		c.LastTxPkGasBalacne,
+		c.CntAddr,
 		c.CntTxReg,
 		c.CntTxMiner,
 		c.CntTxIssue,
@@ -151,19 +154,13 @@ func updateCounter(tx *sql.Tx, key string, value int64) error {
 	sql := fmt.Sprintf("UPDATE `counter` SET %s = %d WHERE `id`=1", key, value)
 
 	_, err := tx.Exec(sql)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func updateNep5Counter(tx *sql.Tx, lastTxPkForNep5 uint, appLogIdx int) error {
 	const sql = "UPDATE `counter` SET `last_tx_pk_for_nep5` = ?, `app_log_idx` = ? WHERE `id` = 1 LIMIT 1"
 	_, err := tx.Exec(sql, lastTxPkForNep5, appLogIdx)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // UpdateNep5TxPkForAddrTx updates last pk of handled nep5 tx records.
@@ -198,9 +195,11 @@ func updateTxCounter(trans *sql.Tx, txType int, cnt int) error {
 	}
 
 	_, err := trans.Exec(query, cnt)
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	return nil
+func incrAddrCounter(trans *sql.Tx) error {
+	query := "UPDATE `counter` SET `cnt_addr` = `cnt_addr` + 1 WHERE `id` = 1 LIMIT 1"
+	_, err := trans.Exec(query)
+	return err
 }

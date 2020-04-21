@@ -213,8 +213,8 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 		holdingAddrsOffset := 0
 
 		addrInfoPair := []addrInfo{
-			addrInfo{addr: fromAddr, balance: fromBalance},
-			addrInfo{addr: toAddr, balance: toBalance},
+			{addr: fromAddr, balance: fromBalance},
+			{addr: toAddr, balance: toBalance},
 		}
 
 		// Handle special case.
