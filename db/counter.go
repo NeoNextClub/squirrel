@@ -198,8 +198,8 @@ func updateTxCounter(trans *sql.Tx, txType int, cnt int) error {
 	return err
 }
 
-func incrAddrCounter(trans *sql.Tx) error {
-	query := "UPDATE `counter` SET `cnt_addr` = `cnt_addr` + 1 WHERE `id` = 1 LIMIT 1"
-	_, err := trans.Exec(query)
+func incrAddrCounter(trans *sql.Tx, delta int) error {
+	query := "UPDATE `counter` SET `cnt_addr` = `cnt_addr` + ? WHERE `id` = 1 LIMIT 1"
+	_, err := trans.Exec(query, delta)
 	return err
 }

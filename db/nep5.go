@@ -129,8 +129,11 @@ func InsertNep5Asset(trans *tx.Transaction, nep5 *nep5.Nep5, regInfo *nep5.RegIn
 		if _, err := tx.Exec(insertNep5RegInfo, newPK, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, regInfo.Description, regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType); err != nil {
 			return err
 		}
+
+		addrCreated := false
 		if addrAsset != nil {
-			if err := createAddrInfoIfNotExist(tx, trans.BlockTime, addrAsset.Address); err != nil {
+			addrCreated, err = createAddrInfoIfNotExist(tx, trans.BlockTime, addrAsset.Address)
+			if err != nil {
 				log.Error.Printf("TxID: %s, nep5Info: %+v, regInfo=%+v, addrAsset=%+v, atHeight=%d\n", trans.TxID, nep5, regInfo, addrAsset, atHeight)
 				return err
 			}
@@ -144,16 +147,23 @@ func InsertNep5Asset(trans *tx.Transaction, nep5 *nep5.Nep5, regInfo *nep5.RegIn
 			}
 		}
 
-		err = updateNep5Counter(tx, trans.ID, -1)
-		return err
+		if addrCreated {
+			if err := incrAddrCounter(tx, 1); err != nil {
+				return err
+			}
+		}
+		return updateNep5Counter(tx, trans.ID, -1)
 	})
 }
 
 // UpdateNep5TotalSupplyAndAddrAsset updates nep5 total supply and admin balance.
 func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr string, balance *big.Float, assetID string, totalSupply *big.Float) error {
 	return transact(func(tx *sql.Tx) error {
+		addrCreated := false
+		var err error
+
 		if balance.Cmp(big.NewFloat(0)) == 1 {
-			if err := createAddrInfoIfNotExist(tx, blockTime, addr); err != nil {
+			if addrCreated, err = createAddrInfoIfNotExist(tx, blockTime, addr); err != nil {
 				log.Error.Printf("blockTime=%d, blockIndex=%d, addr=%s, balance=%v, assetID=%s, totalSupply=%v\n",
 					blockTime, blockIndex, addr, balance, assetID, totalSupply)
 				return err
@@ -189,11 +199,18 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 					}
 				}
 			}
-
 		}
 
 		// Update nep5 total supply.
-		return UpdateNep5TotalSupply(tx, assetID, totalSupply)
+		if err := UpdateNep5TotalSupply(tx, assetID, totalSupply); err != nil {
+			return err
+		}
+
+		if addrCreated {
+			return incrAddrCounter(tx, 1)
+		}
+
+		return nil
 	})
 }
 
@@ -227,6 +244,8 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 			})
 		}
 
+		addrCreatedCnt := 0
+
 		for _, info := range addrInfoPair {
 			addr := info.addr
 			balance := info.balance
@@ -235,8 +254,12 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 				continue
 			}
 
-			if err := updateAddrInfo(tx, trans.BlockTime, trans.TxID, addr, asset.NEP5); err != nil {
+			addrCreated, err := updateAddrInfo(tx, trans.BlockTime, trans.TxID, addr, asset.NEP5)
+			if err != nil {
 				return err
+			}
+			if addrCreated {
+				addrCreatedCnt++
 			}
 
 			cachedAddr, _ := cache.GetAddrOrCreate(addr, trans.BlockTime)
@@ -286,6 +309,11 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 			return err
 		}
 
+		if addrCreatedCnt > 0 {
+			if err := incrAddrCounter(tx, addrCreatedCnt); err != nil {
+				return err
+			}
+		}
 		err := updateNep5Counter(tx, trans.ID, appLogIdx)
 		return err
 	})

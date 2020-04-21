@@ -46,7 +46,8 @@ func GetAddrAssetInfo() []*addr.AssetInfo {
 	return result
 }
 
-func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, assetType string) error {
+// returns true if new address created.
+func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, assetType string) (bool, error) {
 	var incrAsset, incrNep5 = 0, 0
 	switch assetType {
 	case asset.ASSET:
@@ -64,10 +65,10 @@ func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, asse
 		_, err := tx.Exec(createAddrQuery, addr, blockTime, blockTime, incrAsset, incrNep5)
 		if err != nil {
 			log.Error.Printf("TxID: %s, addr=%s, assetType=%s\n", txID, addr, assetType)
-			return err
+			return true, err
 		}
 
-		return incrAddrCounter(tx)
+		return true, nil
 	}
 
 	query := fmt.Sprintf("UPDATE `address` SET `trans_asset` = `trans_asset` + %d, `trans_nep5` = `trans_nep5` + %d", incrAsset, incrNep5)
@@ -82,21 +83,17 @@ func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, asse
 	query += fmt.Sprintf(" WHERE `address` = '%s' LIMIT 1", addr)
 
 	_, err := tx.Exec(query)
-	return err
+	return false, err
 }
 
-func createAddrInfoIfNotExist(tx *sql.Tx, blockTime uint64, addr string) error {
+// returns true if new address created.
+func createAddrInfoIfNotExist(tx *sql.Tx, blockTime uint64, addr string) (bool, error) {
 	_, created := cache.GetAddrOrCreate(addr, blockTime)
 	if created {
 		const createAddrQuery = "INSERT INTO `address` (`address`, `created_at`, `last_transaction_time`, `trans_asset`, `trans_nep5`) VALUES (?, ?, ?, ?, ?)"
 		_, err := tx.Exec(createAddrQuery, addr, blockTime, blockTime, 0, 0)
-		if err != nil {
-			log.Error.Printf("addr=%s\n", addr)
-			return err
-		}
-
-		return incrAddrCounter(tx)
+		return true, err
 	}
 
-	return nil
+	return false, nil
 }

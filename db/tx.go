@@ -249,89 +249,6 @@ func RecordAddrAssetIDTx(records []tx.AddrAssetIDTx, txPK int64) error {
 	})
 }
 
-// ApplyVinsVoutBulk process transaction and update related db table info.
-func ApplyVinsVoutBulk(txs []*tx.Transaction, vins map[string][]*tx.TransactionVin, vouts map[string][]*tx.TransactionVout) error {
-	trans, err := db.Begin()
-	if err != nil {
-		if !connErr(err) {
-			return err
-		}
-
-		reconnect()
-		return ApplyVinsVoutBulk(txs, vins, vouts)
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			trans.Rollback()
-		} else if err != nil {
-			trans.Rollback()
-		} else {
-			err = trans.Commit()
-		}
-	}()
-
-	for _, t := range txs {
-		err = applyVinsVouts(trans, t, vins[t.TxID], vouts[t.TxID])
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func applyVinsVouts(trans *sql.Tx, t *tx.Transaction, vins []*tx.TransactionVin, vouts []*tx.TransactionVout) error {
-	cachedVinVouts := []*tx.TransactionVout{}
-
-	if err := handleVins(t.BlockIndex, trans, vins, &cachedVinVouts); err != nil {
-		return err
-	}
-
-	assetIDs, addrAssetPair := countTxInfo(cachedVinVouts, vouts)
-
-	// Sort keys of addrAssetPair to avoid potential deadlock.
-	var addrs []string
-	for k := range addrAssetPair {
-		addrs = append(addrs, k)
-	}
-	// Sort address to avoid potential deadlock.
-	sort.Strings(addrs)
-
-	for _, addr := range addrs {
-		// Update address table.
-		if err := updateAddrInfo(trans, t.BlockTime, t.TxID, addr, asset.ASSET); err != nil {
-			return err
-		}
-	}
-
-	if err := handleVouts(t.BlockIndex, t.BlockTime, trans, vouts); err != nil {
-		return err
-	}
-
-	if t.Type == "ClaimTransaction" {
-		if err := handleClaimTx(trans, vouts); err != nil {
-			return err
-		}
-	}
-	if t.Type == "IssueTransaction" {
-		if err := handleIssueTx(trans, vouts); err != nil {
-			return err
-		}
-	}
-
-	if err := updateTxInfo(trans, t.BlockTime, t.TxID, addrs, assetIDs, addrAssetPair); err != nil {
-		return err
-	}
-
-	err := updateCounter(trans, "last_tx_pk", int64(t.ID))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // ApplyVinsVouts process transaction and update related db table info.
 func ApplyVinsVouts(t *tx.Transaction, vins []*tx.TransactionVin, vouts []*tx.TransactionVout) error {
 	return transact(func(trans *sql.Tx) error {
@@ -351,10 +268,17 @@ func ApplyVinsVouts(t *tx.Transaction, vins []*tx.TransactionVin, vouts []*tx.Tr
 		// Sort address to avoid potential deadlock.
 		sort.Strings(addrs)
 
+		createdAddrCnt := 0
+
 		for _, addr := range addrs {
 			// Update address table.
-			if err := updateAddrInfo(trans, t.BlockTime, t.TxID, addr, asset.ASSET); err != nil {
+			created, err := updateAddrInfo(trans, t.BlockTime, t.TxID, addr, asset.ASSET)
+			if err != nil {
 				return err
+			}
+
+			if created {
+				createdAddrCnt++
 			}
 		}
 
@@ -377,8 +301,13 @@ func ApplyVinsVouts(t *tx.Transaction, vins []*tx.TransactionVin, vouts []*tx.Tr
 			return err
 		}
 
-		err := updateCounter(trans, "last_tx_pk", int64(t.ID))
-		if err != nil {
+		if createdAddrCnt > 0 {
+			if err := incrAddrCounter(trans, createdAddrCnt); err != nil {
+				return err
+			}
+		}
+
+		if err := updateCounter(trans, "last_tx_pk", int64(t.ID)); err != nil {
 			return err
 		}
 
