@@ -184,7 +184,7 @@ func fetchNep5Tx(nep5TxChan chan<- *nep5TxInfo, applogChan chan<- *tx.Transactio
 	}
 
 	for {
-		txs := db.GetInvocationTxs(nextTxPK, 100)
+		txs := db.GetInvocationTxs(nextTxPK, 1000)
 
 		for i := len(txs) - 1; i >= 0; i-- {
 			// cannot be app call

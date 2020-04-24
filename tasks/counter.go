@@ -16,7 +16,7 @@ func insertNep5AddrTxRecord() {
 	lastPk := db.GetNep5TxPkForAddrTx()
 
 	for {
-		Nep5TxRecs, err := db.GetNep5TxRecords(lastPk, 100)
+		Nep5TxRecs, err := db.GetNep5TxRecords(lastPk, 1000)
 		if err != nil {
 			panic(err)
 		}
@@ -27,7 +27,11 @@ func insertNep5AddrTxRecord() {
 			if err != nil {
 				panic(err)
 			}
+
+			time.Sleep(time.Millisecond * 10)
+			continue
 		}
+
 		time.Sleep(time.Second)
 	}
 }
