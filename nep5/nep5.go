@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"math/big"
 	"squirrel/smartcontract"
+	"squirrel/util"
 )
 
 // Nep5 db model.
@@ -25,6 +26,7 @@ type Nep5 struct {
 
 // RegInfo db model.
 type RegInfo struct {
+	ScriptHash    []byte
 	Name          string
 	Version       string
 	Author        string
@@ -58,9 +60,9 @@ type Tx struct {
 
 // GetNep5RegInfo extracts op codes from stack,
 // and returns nep5 reg info if stack valid.
-func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) ([]byte, *RegInfo, bool) {
+func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) (*RegInfo, bool) {
 	if len(*opCodeDataStack) < 9 {
-		return nil, nil, false
+		return nil, false
 	}
 
 	for {
@@ -72,8 +74,11 @@ func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) ([]byte, *RegInfo,
 	}
 
 	scriptBytes := opCodeDataStack.PopData() // Contract Script.
+	scriptHash := util.GetScriptHash(scriptBytes)
+	// scriptHashHex := util.GetAssetIDFromScriptHash(scriptHash)
 
 	regInfo := RegInfo{
+		ScriptHash:    scriptHash,
 		ParameterList: hex.EncodeToString(opCodeDataStack.PopData()),
 		ReturnType:    hex.EncodeToString(opCodeDataStack.PopData()),
 		NeedStorage:   opCodeDataStack.PopData()[0] == 0x01,
@@ -84,5 +89,5 @@ func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) ([]byte, *RegInfo,
 		Description:   string(opCodeDataStack.PopData()),
 	}
 
-	return scriptBytes, &regInfo, true
+	return &regInfo, true
 }

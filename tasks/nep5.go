@@ -448,19 +448,18 @@ func handleNep5RegTx(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, opCode
 		return "", "", false
 	}
 
-	script, regInfo, ok := nep5.GetNep5RegInfo(opCodeDataStack)
+	regInfo, ok := nep5.GetNep5RegInfo(opCodeDataStack)
 	if !ok {
 		return "", "", false
 	}
 
-	scriptHash := util.GetScriptHash(script)
-	assetID := util.GetAssetIDFromScriptHash(scriptHash)
+	assetID := util.GetAssetIDFromScriptHash(regInfo.ScriptHash)
 	if _, ok := nep5AssetDecimals[assetID]; ok {
 		return util.GetAddressFromScriptHash(adminAddr), assetID, true
 	}
 
 	// Get nep5 definitions to make sure it is nep5.
-	nep5, addrAsset, atHeight, ok := queryNep5AssetInfo(tx, scriptHash, adminAddr)
+	nep5, addrAsset, atHeight, ok := queryNep5AssetInfo(tx, regInfo.ScriptHash, adminAddr)
 	if !ok {
 		return "", "", false
 	}

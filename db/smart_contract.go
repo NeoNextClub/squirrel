@@ -1,18 +1,32 @@
 package db
 
 import (
-	"squirrel/log"
+	"database/sql"
+	"fmt"
 	"squirrel/nep5"
+	"squirrel/util"
 )
 
-// InsertSCInfo persists new smart contract info into db.
-func InsertSCInfo(scriptHash string, regInfo *nep5.RegInfo) error {
-	const query = "INSERT INTO `smartcontract_info`(`script_hash`, `name`, `version`, `author`, `email`, `description`, `need_storage`, `parameter_list`, `return_type`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	_, err := db.Exec(query, scriptHash, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, regInfo.Description, regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType)
-
-	if err != nil {
-		log.Error.Println(err)
+// InsertSCInfos persists new smart contracts info into db.
+func InsertSCInfos(scRegInfos []*nep5.RegInfo, txPK uint) error {
+	if len(scRegInfos) == 0 {
+		return UpdateLastTxPkForSC(txPK)
 	}
 
-	return err
+	return transact(func(trans *sql.Tx) error {
+		query := "INSERT INTO `smartcontract_info`(`script_hash`, `name`, `version`, `author`, `email`, `description`, `need_storage`, `parameter_list`, `return_type`) VALUES "
+
+		for _, regInfo := range scRegInfos {
+			scriptHashHex := util.GetAssetIDFromScriptHash(regInfo.ScriptHash)
+			query += fmt.Sprintf("('%s', '%s', '%s', '%s', '%s', '%s', '%t', '%s', '%s'), ",
+				scriptHashHex, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, regInfo.Description, regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType)
+		}
+
+		_, err := trans.Exec(query[:len(query)-2])
+		if err != nil {
+			panic(err)
+		}
+
+		return updateCounter(trans, "last_tx_pk_for_sc", int64(txPK))
+	})
 }

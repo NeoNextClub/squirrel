@@ -8,7 +8,6 @@ import (
 	"squirrel/mail"
 	"squirrel/nep5"
 	"squirrel/smartcontract"
-	"squirrel/util"
 	"strings"
 	"time"
 )
@@ -23,8 +22,8 @@ var (
 )
 
 type scStore struct {
-	txPK      uint
-	scriptHex string
+	scriptHexs []string
+	txPK       uint
 }
 
 func startSCTask() {
@@ -54,14 +53,19 @@ func fetchSCTx(scTxChan chan<- scStore, lastPk uint) {
 
 		if len(txs) == 0 {
 			time.Sleep(2 * time.Second)
+			continue
 		}
 
 		nextTxPK = txs[len(txs)-1].ID + 1
+
+		scriptHexs := []string{}
 		for _, tx := range txs {
-			scTxChan <- scStore{
-				txPK:      tx.ID,
-				scriptHex: tx.Script,
-			}
+			scriptHexs = append(scriptHexs, tx.Script)
+		}
+
+		scTxChan <- scStore{
+			scriptHexs: scriptHexs,
+			txPK:       txs[len(txs)-1].ID + 1,
 		}
 	}
 }
@@ -70,39 +74,37 @@ func handleScTx(scTxChan <-chan scStore) {
 	defer mail.AlertIfErr()
 
 	for scInfo := range scTxChan {
-		if !handleSC(scInfo) {
-			handleSCCounterStore(scInfo.txPK)
-			continue
+		scRegInfos := filterSC(scInfo.scriptHexs)
+		if len(scRegInfos) > 0 {
+			db.InsertSCInfos(scRegInfos, scInfo.txPK)
 		}
 
 		showSCProgress(scInfo.txPK)
 	}
 }
 
-func handleSC(sc scStore) bool {
-	if !strings.HasSuffix(sc.scriptHex, "4e656f2e436f6e74726163742e437265617465") {
-		return false
+func filterSC(scriptHexs []string) []*nep5.RegInfo {
+	result := []*nep5.RegInfo{}
+
+	for _, scriptHex := range scriptHexs {
+		if !strings.HasSuffix(scriptHex, "4e656f2e436f6e74726163742e437265617465") {
+			continue
+		}
+
+		opCodeDataStack := smartcontract.ReadScript(scriptHex)
+		if opCodeDataStack == nil || len(*opCodeDataStack) == 0 {
+			continue
+		}
+
+		regInfo, ok := nep5.GetNep5RegInfo(opCodeDataStack.Copy())
+		if !ok {
+			continue
+		}
+
+		result = append(result, regInfo)
 	}
 
-	opCodeDataStack := smartcontract.ReadScript(sc.scriptHex)
-	if opCodeDataStack == nil || len(*opCodeDataStack) == 0 {
-		return false
-	}
-
-	scriptBytes, regInfo, ok := nep5.GetNep5RegInfo(opCodeDataStack.Copy())
-	if !ok {
-		return false
-	}
-
-	scriptHashBytes := util.GetScriptHash(scriptBytes)
-	scriptHash := util.GetAssetIDFromScriptHash(scriptHashBytes)
-
-	err := db.InsertSCInfo(scriptHash, regInfo)
-	if err != nil {
-		panic(err)
-	}
-
-	return true
+	return result
 }
 
 func handleSCCounterStore(txPK uint) {
