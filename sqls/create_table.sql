@@ -152,6 +152,7 @@ create table counter
 create table smartcontract_info
 (
     id             int unsigned auto_increment primary key,
+    txid           char(66)     not null,
     script_hash    char(40)     not null,
     name           varchar(255) not null,
     version        varchar(255) not null,

@@ -448,7 +448,7 @@ func handleNep5RegTx(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, opCode
 		return "", "", false
 	}
 
-	regInfo, ok := nep5.GetNep5RegInfo(opCodeDataStack)
+	regInfo, ok := nep5.GetNep5RegInfo(tx.TxID, opCodeDataStack)
 	if !ok {
 		return "", "", false
 	}

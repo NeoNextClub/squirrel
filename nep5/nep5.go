@@ -26,6 +26,7 @@ type Nep5 struct {
 
 // RegInfo db model.
 type RegInfo struct {
+	TxID          string
 	ScriptHash    []byte
 	Name          string
 	Version       string
@@ -60,7 +61,7 @@ type Tx struct {
 
 // GetNep5RegInfo extracts op codes from stack,
 // and returns nep5 reg info if stack valid.
-func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) (*RegInfo, bool) {
+func GetNep5RegInfo(txID string, opCodeDataStack *smartcontract.DataStack) (*RegInfo, bool) {
 	if len(*opCodeDataStack) < 9 {
 		return nil, false
 	}
@@ -78,6 +79,7 @@ func GetNep5RegInfo(opCodeDataStack *smartcontract.DataStack) (*RegInfo, bool) {
 	// scriptHashHex := util.GetAssetIDFromScriptHash(scriptHash)
 
 	regInfo := RegInfo{
+		TxID:          txID,
 		ScriptHash:    scriptHash,
 		ParameterList: hex.EncodeToString(opCodeDataStack.PopData()),
 		ReturnType:    hex.EncodeToString(opCodeDataStack.PopData()),
