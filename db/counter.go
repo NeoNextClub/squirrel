@@ -14,6 +14,7 @@ type Counter struct {
 	LastAssetTxPk      uint
 	LastTxPkForNep5    uint
 	AppLogIdx          int
+	LastTxPkForSC      uint
 	Nep5TxPkForAddrTx  uint
 	LastTxPkGasBalacne uint
 	CntAddr            uint
@@ -41,6 +42,7 @@ func initCounterInstance() Counter {
 		LastAssetTxPk:      0,
 		LastTxPkForNep5:    0,
 		AppLogIdx:          -1,
+		LastTxPkForSC:      0,
 		Nep5TxPkForAddrTx:  0,
 		LastTxPkGasBalacne: 0,
 		CntAddr:            0,
@@ -53,7 +55,7 @@ func initCounterInstance() Counter {
 		CntTxPublish:       0,
 		CntTxEnrollment:    0,
 	}
-	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	_, err := db.Exec(query,
 		c.ID,
@@ -62,6 +64,7 @@ func initCounterInstance() Counter {
 		c.LastAssetTxPk,
 		c.LastTxPkForNep5,
 		c.AppLogIdx,
+		c.LastTxPkForSC,
 		c.Nep5TxPkForAddrTx,
 		c.LastTxPkGasBalacne,
 		c.CntAddr,
@@ -82,7 +85,7 @@ func initCounterInstance() Counter {
 }
 
 func getCounterInstance() Counter {
-	const query = "SELECT `id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance` FROM `counter` WHERE `id` = 1 LIMIT 1"
+	const query = "SELECT `id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance` FROM `counter` WHERE `id` = 1 LIMIT 1"
 
 	var counter Counter
 	err := db.QueryRow(query).Scan(
@@ -92,6 +95,7 @@ func getCounterInstance() Counter {
 		&counter.LastAssetTxPk,
 		&counter.LastTxPkForNep5,
 		&counter.AppLogIdx,
+		&counter.LastTxPkForSC,
 		&counter.Nep5TxPkForAddrTx,
 		&counter.LastTxPkGasBalacne,
 	)
@@ -124,6 +128,12 @@ func GetLastTxPkForNep5() (uint, int) {
 	return counter.LastTxPkForNep5, counter.AppLogIdx
 }
 
+// GetLastTxPkForSC returns counter info of last processed sc transactions.
+func GetLastTxPkForSC() uint {
+	counter := getCounterInstance()
+	return counter.LastTxPkForSC
+}
+
 // GetLastTxPkForGasBalance returns the last resolved pk of gas balance task.
 func GetLastTxPkForGasBalance() uint {
 	counter := getCounterInstance()
@@ -147,6 +157,13 @@ func UpdateLastTxPk(txPk uint) error {
 func UpdateLastTxPkForNep5(currentTxPk uint, applogIdx int) error {
 	const updateCounterSQL = "UPDATE `counter` SET `last_tx_pk_for_nep5` = ?, `app_log_idx` = ? WHERE `id` = 1 LIMIT 1"
 	_, err := db.Exec(updateCounterSQL, currentTxPk, applogIdx)
+	return err
+}
+
+// UpdateLastTxPkForSC updates counter info of last processed sc transactions.
+func UpdateLastTxPkForSC(currentTxPk uint) error {
+	const updateCounterSQL = "UPDATE `counter` SET `last_tx_pk_for_sc` = ? WHERE `id` = 1 LIMIT 1"
+	_, err := db.Exec(updateCounterSQL, currentTxPk)
 	return err
 }
 

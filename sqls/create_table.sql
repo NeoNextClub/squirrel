@@ -134,6 +134,7 @@ create table counter
     last_asset_tx_pk       int unsigned not null,
     last_tx_pk_for_nep5    int unsigned not null,
     app_log_idx            int          not null,
+    last_tx_pk_for_sc      int unsigned not null,
     nep5_tx_pk_for_addr_tx int unsigned not null,
     last_tx_pk_gas_balance int unsigned not null,
     cnt_addr               int unsigned not null,
@@ -146,6 +147,24 @@ create table counter
     cnt_tx_publish         int unsigned not null,
     cnt_tx_enrollment      int unsigned not null
 ) engine = InnoDB default charset = 'utf8mb4';
+
+
+create table smartcontract_info
+(
+    id             int unsigned auto_increment primary key,
+    script_hash    char(40)     not null,
+    name           varchar(255) not null,
+    version        varchar(255) not null,
+    author         varchar(255) not null,
+    email          varchar(255) not null,
+    description    varchar(255) not null,
+    need_storage   tinyint(1)   not null,
+    parameter_list varchar(255) not null,
+    return_type    varchar(255) not null
+) engine = InnoDB default charset = 'utf8mb4';
+
+create index idx_script_hash
+    on smartcontract_info(script_hash);
 
 
 create table nep5

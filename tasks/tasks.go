@@ -33,6 +33,7 @@ func Run() {
 	go startUpdateCounterTask()
 	go startAssetTxTask()
 	go startGasBalanceTask()
+	go startSCTask()
 }
 
 func initTask(dbHeight int) {

@@ -154,6 +154,7 @@ func store(rawBlocks []*rpc.RawBlock) {
 	AssetTxMaxPkShouldRefresh = true
 	Nep5MaxPkShouldRefresh = true
 	gasMaxPkShouldRefresh = true
+	scMaxPkShouldRefresh = true
 
 	bestHeight := rpc.BestHeight.Get()
 
