@@ -83,10 +83,14 @@ func transact(txFunc func(*sql.Tx) error) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			tx.Rollback()
+			panic(p)
 		} else if err != nil {
 			tx.Rollback()
 		} else {
 			err = tx.Commit()
+			if err != nil {
+				log.Error.Println(err)
+			}
 		}
 	}()
 

@@ -115,15 +115,6 @@ func filterSC(list []scriptInfo) []*nep5.RegInfo {
 	return result
 }
 
-func handleSCCounterStore(txPK uint) {
-	err := db.UpdateLastTxPkForSC(txPK)
-	if err != nil {
-		panic(err)
-	}
-
-	showSCProgress(txPK)
-}
-
 func showSCProgress(txPk uint) {
 	if maxScPK == 0 || scMaxPkShouldRefresh {
 		scMaxPkShouldRefresh = false
