@@ -1,3 +1,11 @@
+/*
+To restart this task from beginning, execute the following sqls:
+
+UPDATE `counter` SET `last_tx_pk_for_sc` = 0 WHERE `id` = 1 LIMIT 1;
+TRUNCATE TABLE `smartcontract_info`;
+
+*/
+
 package tasks
 
 import (
