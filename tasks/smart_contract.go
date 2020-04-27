@@ -104,7 +104,8 @@ func filterSC(list []scriptInfo) []*nep5.RegInfo {
 
 	for _, info := range list {
 		if !strings.HasSuffix(info.script, "4e656f2e436f6e74726163742e437265617465") &&
-			!isNep5RegistrationTx(info.script) {
+			!isNep5RegistrationTx(info.script) &&
+			!isNep5MigrateTx(info.script) {
 			continue
 		}
 
