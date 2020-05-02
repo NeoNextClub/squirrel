@@ -60,7 +60,8 @@ func fetchBlock() {
 
 		// Beyond the latest block.
 		if b == nil {
-			if worker.shouldQuit() {
+			if nextHeight > rpc.BestHeight.Get()-50 &&
+				worker.shouldQuit() {
 				return
 			}
 
