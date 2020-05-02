@@ -19,7 +19,7 @@ var (
 	// their height will be set to -1.
 	// These servers' heights will be refreshed timely.
 	servers map[string]int
-	sLock   sync.Mutex
+	sLock   sync.RWMutex
 
 	// BestHeight indicates current highest height.
 	BestHeight util.SafeCounter
@@ -38,8 +38,8 @@ func getServer(minHeight int) (string, bool) {
 		panic(err)
 	}
 
-	sLock.Lock()
-	defer sLock.Unlock()
+	sLock.RLock()
+	defer sLock.RUnlock()
 
 	// Suppose all servers are qualified.
 	candidates := []string{}
@@ -76,8 +76,8 @@ func serverUnavailable(url string) {
 
 // PrintServerStatus prints rpc host with its current best height.
 func PrintServerStatus() {
-	sLock.Lock()
-	defer sLock.Unlock()
+	sLock.RLock()
+	defer sLock.RUnlock()
 
 	for host, height := range servers {
 		if height < 0 {
