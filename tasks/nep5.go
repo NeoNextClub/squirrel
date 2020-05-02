@@ -776,11 +776,10 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	}
 	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 
-	adminBalanceHexStr, ok := result.Stack[4].Value.(string)
+	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[4].Type)
 	if !ok {
 		return nil, nil, 0, false
 	}
-	adminBalance := util.HexToBigFloat(adminBalanceHexStr)
 	if adminBalance.Cmp(big.NewFloat(0)) == 1 {
 		adminBalance = new(big.Float).Quo(adminBalance, big.NewFloat(math.Pow10(int(decimals))))
 	}
@@ -867,7 +866,10 @@ func queryCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byte, 
 		return big.NewFloat(0), false
 	}
 
-	callerBalance := util.HexToBigFloat(result.Stack[0].Value.(string))
+	callerBalance, ok := extractValue(result.Stack[0].Value, result.Stack[0].Type)
+	if !ok {
+		return big.NewFloat(0), false
+	}
 	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
 
 	return callerBalance, true
@@ -919,7 +921,10 @@ func queryBalances(txBlockIndex uint, scriptHash []byte, assetID string, addrByt
 			continue
 		}
 
-		balance := util.HexToBigFloat(result.Stack[idx].Value.(string))
+		balance, ok := extractValue(result.Stack[idx].Value, result.Stack[idx].Type)
+		if !ok {
+			continue
+		}
 		balances[i] = getReadableValue(assetID, balance)
 		idx++
 	}

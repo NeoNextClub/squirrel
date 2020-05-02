@@ -42,16 +42,6 @@ func HexToBigInt(hexStr string) *big.Int {
 	return z
 }
 
-// HexToBigFloat returns big.Float of given hex string.
-func HexToBigFloat(hexStr string) *big.Float {
-	if len(hexStr) == 0 {
-		return big.NewFloat(0)
-	}
-
-	bytes, _ := hex.DecodeString(hexStr)
-	return BytesToBigFloat(bytes)
-}
-
 func padString(str string) string {
 	strLen := len(str)
 	if strLen >= 16 {
