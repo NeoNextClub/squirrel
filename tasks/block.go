@@ -154,6 +154,7 @@ func store(rawBlocks []*rpc.RawBlock) {
 	TxMaxPkShouldRefresh = true
 	AssetTxMaxPkShouldRefresh = true
 	Nep5MaxPkShouldRefresh = true
+	nftMaxPkShouldRefresh = true
 	gasMaxPkShouldRefresh = true
 	scMaxPkShouldRefresh = true
 

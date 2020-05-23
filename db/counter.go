@@ -13,9 +13,11 @@ type Counter struct {
 	LastTxPk           uint
 	LastAssetTxPk      uint
 	LastTxPkForNep5    uint
+	LastTxPkForNft     uint
 	AppLogIdx          int
 	LastTxPkForSC      uint
 	Nep5TxPkForAddrTx  uint
+	NftTxPkForAddrTx   uint
 	LastTxPkGasBalacne uint
 	CntAddr            uint
 	CntTxReg           uint
@@ -41,9 +43,11 @@ func initCounterInstance() Counter {
 		LastTxPk:           0,
 		LastAssetTxPk:      0,
 		LastTxPkForNep5:    0,
+		LastTxPkForNft:     0,
 		AppLogIdx:          -1,
 		LastTxPkForSC:      0,
 		Nep5TxPkForAddrTx:  0,
+		NftTxPkForAddrTx:   0,
 		LastTxPkGasBalacne: 0,
 		CntAddr:            0,
 		CntTxReg:           0,
@@ -55,7 +59,7 @@ func initCounterInstance() Counter {
 		CntTxPublish:       0,
 		CntTxEnrollment:    0,
 	}
-	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `last_tx_pk_for_nft`,`app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `nft_tx_pk_for_addr_tx`,`last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	_, err := db.Exec(query,
 		c.ID,
@@ -63,9 +67,11 @@ func initCounterInstance() Counter {
 		c.LastTxPk,
 		c.LastAssetTxPk,
 		c.LastTxPkForNep5,
+		c.LastTxPkForNft,
 		c.AppLogIdx,
 		c.LastTxPkForSC,
 		c.Nep5TxPkForAddrTx,
+		c.NftTxPkForAddrTx,
 		c.LastTxPkGasBalacne,
 		c.CntAddr,
 		c.CntTxReg,
@@ -85,7 +91,7 @@ func initCounterInstance() Counter {
 }
 
 func getCounterInstance() Counter {
-	const query = "SELECT `id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance` FROM `counter` WHERE `id` = 1 LIMIT 1"
+	const query = "SELECT `id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `last_tx_pk_for_nft`,`app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `nft_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance` FROM `counter` WHERE `id` = 1 LIMIT 1"
 
 	var counter Counter
 	err := db.QueryRow(query).Scan(
@@ -94,9 +100,11 @@ func getCounterInstance() Counter {
 		&counter.LastTxPk,
 		&counter.LastAssetTxPk,
 		&counter.LastTxPkForNep5,
+		&counter.LastTxPkForNft,
 		&counter.AppLogIdx,
 		&counter.LastTxPkForSC,
 		&counter.Nep5TxPkForAddrTx,
+		&counter.NftTxPkForAddrTx,
 		&counter.LastTxPkGasBalacne,
 	)
 	switch err {
@@ -105,6 +113,7 @@ func getCounterInstance() Counter {
 	case nil:
 		return counter
 	default:
+		// log.printf("%%%%%%%%%%%%%%%%%%%%%%%%")
 		reconnect()
 		return getCounterInstance()
 	}
@@ -128,6 +137,12 @@ func GetLastTxPkForNep5() (uint, int) {
 	return counter.LastTxPkForNep5, counter.AppLogIdx
 }
 
+// GetLastTxPkForNft returns counter info of last processed nft transactions.
+func GetLastTxPkForNft() (uint, int) {
+	counter := getCounterInstance()
+	return counter.LastTxPkForNft, counter.AppLogIdx
+}
+
 // GetLastTxPkForSC returns counter info of last processed sc transactions.
 func GetLastTxPkForSC() uint {
 	counter := getCounterInstance()
@@ -146,6 +161,12 @@ func GetNep5TxPkForAddrTx() uint {
 	return counter.Nep5TxPkForAddrTx
 }
 
+// GetNftTxPkForAddrTx returns last pk of handled nft tx records.
+func GetNftTxPkForAddrTx() uint {
+	counter := getCounterInstance()
+	return counter.NftTxPkForAddrTx
+}
+
 // UpdateLastTxPk updates last pk of processed transaction.
 func UpdateLastTxPk(txPk uint) error {
 	const updateCounterSQL = "UPDATE `counter` SET `last_tx_pk` = ? WHERE `id` = 1 LIMIT 1"
@@ -156,6 +177,13 @@ func UpdateLastTxPk(txPk uint) error {
 // UpdateLastTxPkForNep5 updates counter info of last processed nep5 transactions.
 func UpdateLastTxPkForNep5(currentTxPk uint, applogIdx int) error {
 	const updateCounterSQL = "UPDATE `counter` SET `last_tx_pk_for_nep5` = ?, `app_log_idx` = ? WHERE `id` = 1 LIMIT 1"
+	_, err := db.Exec(updateCounterSQL, currentTxPk, applogIdx)
+	return err
+}
+
+// UpdateLastTxPkForNft updates counter info of last processed nft transactions.
+func UpdateLastTxPkForNft(currentTxPk uint, applogIdx int) error {
+	const updateCounterSQL = "UPDATE `counter` SET `last_tx_pk_for_nft` = ?, `app_log_idx` = ? WHERE `id` = 1 LIMIT 1"
 	_, err := db.Exec(updateCounterSQL, currentTxPk, applogIdx)
 	return err
 }
@@ -180,9 +208,22 @@ func updateNep5Counter(tx *sql.Tx, lastTxPkForNep5 uint, appLogIdx int) error {
 	return err
 }
 
+func updateNftCounter(tx *sql.Tx, lastTxPkForNft uint, appLogIdx int) error {
+	const sql = "UPDATE `counter` SET `last_tx_pk_for_nft` = ?, `app_log_idx` = ? WHERE `id` = 1 LIMIT 1"
+	_, err := tx.Exec(sql, lastTxPkForNft, appLogIdx)
+	return err
+}
+
 // UpdateNep5TxPkForAddrTx updates last pk of handled nep5 tx records.
 func UpdateNep5TxPkForAddrTx(tx *sql.Tx, pk uint) error {
 	const query = "UPDATE `counter` SET `nep5_tx_pk_for_addr_tx` = ? WHERE `id` = 1 LIMIT 1"
+	_, err := tx.Exec(query, pk)
+	return err
+}
+
+// UpdateNftTxPkForAddrTx updates last pk of handled nft tx records.
+func UpdateNftTxPkForAddrTx(tx *sql.Tx, pk uint) error {
+	const query = "UPDATE `counter` SET `nft_tx_pk_for_addr_tx` = ? WHERE `id` = 1 LIMIT 1"
 	_, err := tx.Exec(query, pk)
 	return err
 }

@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"math/big"
 	"sort"
 	"squirrel/asset"
@@ -381,6 +382,7 @@ func updateTxInfo(tx *sql.Tx, blockTime uint64, txID string, addrs []string, ass
 	for _, addr := range addrs {
 		// Add new AddrTx record.
 		const insertAddrTx = "INSERT INTO `addr_tx` (`txid`, `address`, `block_time`, `asset_type`) VALUES (?, ?, ?, ?)"
+		log.Printf(txID + ":" + addr + ":" + asset.ASSET)
 		if _, err := tx.Exec(insertAddrTx, txID, addr, blockTime, asset.ASSET); err != nil {
 			return err
 		}

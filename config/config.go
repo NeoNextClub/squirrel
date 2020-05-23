@@ -118,7 +118,7 @@ func GetDbConnStr() string {
 	if len(params) > 0 {
 		str = fmt.Sprintf("%s?%s", str, strings.Join(params, "&"))
 	}
-
+	//str = "***********************************************"
 	return str
 }
 

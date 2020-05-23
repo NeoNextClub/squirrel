@@ -16,19 +16,17 @@ func Run() {
 	// Init cache to speed up db queries
 	addrAssetInfo := db.GetAddrAssetInfo()
 	cache.LoadAddrAssetInfo(addrAssetInfo)
-
 	dbHeight := db.GetLastHeight()
 	initTask(dbHeight)
-
 	for i := 0; i < config.GetGoroutines(); i++ {
 		go fetchBlock()
 	}
-
 	blockChannel = make(chan *rpc.RawBlock, bufferSize)
 	go arrangeBlock(dbHeight, blockChannel)
 	go storeBlock(blockChannel)
 
 	go startNep5Task()
+	go startNftTask()
 	go startTxTask()
 	go startUpdateCounterTask()
 	go startAssetTxTask()

@@ -133,9 +133,11 @@ create table counter
     last_tx_pk             int unsigned not null,
     last_asset_tx_pk       int unsigned not null,
     last_tx_pk_for_nep5    int unsigned not null,
+    last_tx_pk_for_nft     int unsigned not null,
     app_log_idx            int          not null,
     last_tx_pk_for_sc      int unsigned not null,
     nep5_tx_pk_for_addr_tx int unsigned not null,
+    nft_tx_pk_for_addr_tx int unsigned not null,
     last_tx_pk_gas_balance int unsigned not null,
     cnt_addr               int unsigned not null,
     cnt_tx_reg             int unsigned not null,
@@ -240,6 +242,72 @@ create table nep5_migrate
     new_asset_id char(40) not null,
     migrate_txid char(66) not null
 ) engine = InnoDB default charset = 'utf8mb4';
+
+
+create table nft
+(
+    id                int unsigned auto_increment primary key,
+    asset_id          char(40)             not null,
+    admin_address     char(40)             not null,
+    name              varchar(128)          not null,
+    symbol            varchar(16)          not null,
+    decimals          tinyint unsigned     not null,
+    total_supply      decimal(35, 8)       not null,
+    txid              char(66)             not null,
+    block_index       int unsigned         not null,
+    block_time        bigint unsigned      not null,
+    addresses         bigint unsigned      not null,
+    holding_addresses bigint unsigned      not null,
+    transfers         bigint unsigned      not null,
+    visible           tinyint(1) default 1 not null
+) engine = InnoDB default charset = 'utf8mb4';
+
+create index idx_nft_txid
+    on nft(txid);
+
+
+create table nft_reg_info
+(
+    id             int unsigned auto_increment primary key,
+    nft_id        int unsigned not null,
+    name           varchar(255) not null,
+    version        varchar(255) not null,
+    author         varchar(255) not null,
+    email          varchar(255) not null,
+    description    varchar(255) not null,
+    need_storage   tinyint(1)   not null,
+    parameter_list varchar(255) not null,
+    return_type    varchar(255) not null
+) engine = InnoDB default charset = 'utf8mb4';
+
+create index idx_nft_id
+    on nft_reg_info(nft_id);
+
+
+create table nft_tx
+(
+    id          int unsigned auto_increment primary key,
+    txid        char(66)        not null,
+    asset_id    char(40)        not null,
+    `from`      varchar(128)     not null,
+    `to`        varchar(128)     not null,
+    value       double          not null,
+    block_index int unsigned    not null,
+    block_time  bigint unsigned not null
+) engine = InnoDB default charset = 'utf8mb4';
+
+create index idx_nft_tx_asset_id
+    on nft_tx(asset_id);
+
+create index idx_nft_tx_from
+    on nft_tx(`from`);
+
+create index idx_nft_tx_to
+    on nft_tx(`to`);
+
+create index idx_nft_tx_txid
+    on nft_tx(txid);
+
 
 
 create table tx

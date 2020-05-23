@@ -67,42 +67,41 @@ import (
 	"squirrel/cache"
 	"squirrel/log"
 	"squirrel/mail"
+	"squirrel/nft"
 	"squirrel/smartcontract"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"squirrel/addr"
 	"squirrel/db"
-	"squirrel/nep5"
 	"squirrel/rpc"
 	"squirrel/tx"
 	"squirrel/util"
 )
 
-const nep5ChanSize = 5000
+const nftChanSize = 5000
 
 var (
-	// Nep5MaxPkShouldRefresh indicates if highest pk should be refreshed
-	Nep5MaxPkShouldRefresh bool
+	// NftMaxPkShouldRefresh indicates if highest pk should be refreshed
+	nftMaxPkShouldRefresh bool
 
 	// Cache decimals of nep5 asset
-	nep5AssetDecimals map[string]uint8
-	nProgress         = Progress{}
-	maxNep5PK         uint
+	nftAssetDecimals map[string]uint8
+	nftProgress      = Progress{}
+	maxNftPK         uint
 
 	// appLogs stores txid with its applicationlog rpc response
-	appLogs sync.Map
+	nftAppLogs sync.Map
 )
 
-type nep5TxInfo struct {
+type nftTxInfo struct {
 	tx           *tx.Transaction
 	dataStack    *smartcontract.DataStack
 	appLogResult *rpc.RawApplicationLogResult
 }
 
-type nep5Store struct {
+type nftStore struct {
 	// 0: nep5 reg
 	// 1: nep5 tx
 	// 2: nep5 addr balance and total supply
@@ -111,15 +110,15 @@ type nep5Store struct {
 	d interface{}
 }
 
-type nep5AssetStore struct {
+type nftAssetStore struct {
 	tx        *tx.Transaction
-	nep5      *nep5.Nep5
-	regInfo   *nep5.RegInfo
+	nft       *nft.Nft
+	regInfo   *nft.NftRegInfo
 	addrAsset *addr.Asset
 	atHeight  uint
 }
 
-type nep5TxStore struct {
+type nftTxStore struct {
 	tx            *tx.Transaction
 	applogIdx     int
 	assetID       string
@@ -131,7 +130,7 @@ type nep5TxStore struct {
 	totalSupply   *big.Float
 }
 
-type nep5BalanceTSStore struct {
+type nftBalanceTSStore struct {
 	txPK        uint
 	blockTime   uint64
 	blockIndex  uint
@@ -141,12 +140,12 @@ type nep5BalanceTSStore struct {
 	totalSupply *big.Float
 }
 
-type nep5CounterStore struct {
+type nftCounterStore struct {
 	txPK      uint
 	applogIdx int
 }
 
-type nep5MigrateStore struct {
+type nft5MigrateStore struct {
 	newAssetAdmin string
 	oldAssetID    string
 	newAssetID    string
@@ -154,29 +153,29 @@ type nep5MigrateStore struct {
 	txID          string
 }
 
-func startNep5Task() {
-	nep5AssetDecimals = db.GetNep5AssetDecimals()
-	nep5TxChan := make(chan *nep5TxInfo, nep5ChanSize)
-	applogChan := make(chan *tx.Transaction, nep5ChanSize)
-	nep5StoreChan := make(chan *nep5Store, nep5ChanSize)
+func startNftTask() {
+	nftAssetDecimals = db.GetNftAssetDecimals()
+	nftTxChan := make(chan *nftTxInfo, nftChanSize)
+	applogChan := make(chan *tx.Transaction, nftChanSize)
+	nftStoreChan := make(chan *nftStore, nftChanSize)
 
 	lastPk, applogIdx := db.GetLastTxPkForNep5()
 
-	go fetchNep5Tx(nep5TxChan, applogChan, lastPk, applogIdx)
-	go fetchAppLog(4, applogChan)
+	go fetchNftTx(nftTxChan, applogChan, lastPk, applogIdx)
+	go fetchNftAppLog(4, applogChan)
 
-	go handleNep5Tx(nep5TxChan, nep5StoreChan, applogIdx)
-	go handleNep5Store(nep5StoreChan)
+	go handleNftTx(nftTxChan, nftStoreChan, applogIdx)
+	go handleNftStore(nftStoreChan)
 }
 
-func fetchNep5Tx(nep5TxChan chan<- *nep5TxInfo, applogChan chan<- *tx.Transaction, lastPk uint, applogIdx int) {
+func fetchNftTx(nftTxChan chan<- *nftTxInfo, applogChan chan<- *tx.Transaction, lastPk uint, applogIdx int) {
 	defer mail.AlertIfErr()
 
 	// If there are some transfers in this transaction,
 	// this variable will be the last index(starts from 0).
 	// If this variable is -1,
 	// it means CURRENT TRANSACTION HAD BEEN HANDLED(zero transfers,
-	// is nep5 trgistration transfer, or non-transfer actions),
+	// is nft trgistration transfer, or non-transfer actions),
 	// so nextTxPK should be next pk, not the current pk.
 	nextTxPK := lastPk
 	if applogIdx == -1 {
@@ -184,7 +183,7 @@ func fetchNep5Tx(nep5TxChan chan<- *nep5TxInfo, applogChan chan<- *tx.Transactio
 	}
 
 	for {
-		txs := db.GetInvocationTxs(nextTxPK, 1000)
+		txs := db.GetNftInvocationTxs(nextTxPK, 1000)
 
 		for i := len(txs) - 1; i >= 0; i-- {
 			// cannot be app call
@@ -216,20 +215,20 @@ func fetchNep5Tx(nep5TxChan chan<- *nep5TxInfo, applogChan chan<- *tx.Transactio
 
 				appLogs.Delete(tx.TxID)
 
-				nep5Info := nep5TxInfo{
+				nftInfo := nftTxInfo{
 					tx:           tx,
 					dataStack:    smartcontract.ReadScript(tx.Script),
 					appLogResult: appLogResult.(*rpc.RawApplicationLogResult),
 				}
 
-				nep5TxChan <- &nep5Info
+				nftTxChan <- &nftInfo
 				break
 			}
 		}
 	}
 }
 
-func fetchAppLog(goroutines int, applogChan <-chan *tx.Transaction) {
+func fetchNftAppLog(goroutines int, applogChan <-chan *tx.Transaction) {
 	defer mail.AlertIfErr()
 
 	for i := 0; i < goroutines; i++ {
@@ -242,18 +241,18 @@ func fetchAppLog(goroutines int, applogChan <-chan *tx.Transaction) {
 	}
 }
 
-func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store, applogIdx int) {
+func handleNftTx(nftTxChan <-chan *nftTxInfo, nftStoreChan chan<- *nftStore, applogIdx int) {
 	defer mail.AlertIfErr()
 
-	for nep5Info := range nep5TxChan {
-		tx := nep5Info.tx
-		opCodeDataStack := nep5Info.dataStack
-		appLogResult := nep5Info.appLogResult
+	for nftInfo := range nftTxChan {
+		tx := nftInfo.tx
+		opCodeDataStack := nftInfo.dataStack
+		appLogResult := nftInfo.appLogResult
 
 		if opCodeDataStack == nil || len(*opCodeDataStack) == 0 {
-			nep5StoreChan <- &nep5Store{
+			nftStoreChan <- &nftStore{
 				t: 3,
-				d: nep5CounterStore{
+				d: nftCounterStore{
 					txPK:      tx.ID,
 					applogIdx: -1,
 				},
@@ -261,16 +260,14 @@ func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store
 			continue
 		}
 
-		// It may be a nep5 registration transaction.
-		if applogIdx == -1 && isNep5RegistrationTx(tx.Script) {
-			handleNep5RegTx(nep5StoreChan, tx, opCodeDataStack.Copy())
-			if isNep5MigrateTx((tx.Script)) {
-				handleMigrate(opCodeDataStack, nep5StoreChan, tx)
-			}
-		} else if applogIdx == -1 && isNep5MigrateTx(tx.Script) {
-			handleMigrate(opCodeDataStack, nep5StoreChan, tx)
+		// It may be a nft registration transaction.
+		if applogIdx == -1 && isNftRegistrationTx(tx.Script) {
+			handleNftRegTx(nftStoreChan, tx, opCodeDataStack.Copy())
+			// if isNep5MigrateTx((tx.Script)) {
+			// 	handleMigrate(opCodeDataStack, nep5StoreChan, tx)
+			// }
 		} else {
-			handleNep5NonTxCall(nep5StoreChan, tx, opCodeDataStack)
+			handleNftNonTxCall(nftStoreChan, tx, opCodeDataStack)
 
 			if len(appLogResult.Executions) > 0 {
 				notifs := []rpc.RawNotifications{}
@@ -284,14 +281,14 @@ func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store
 					notifs = append(notifs, exec.Notifications...)
 				}
 
-				handleNep5TxCall(nep5StoreChan, tx, notifs, applogIdx)
+				handleNftTxCall(nftStoreChan, tx, notifs, applogIdx)
 			}
 
 			// Set applogIdx to -1 to signify these transaction has been handled.
 			applogIdx = -1
-			nep5StoreChan <- &nep5Store{
+			nftStoreChan <- &nftStore{
 				t: 3,
-				d: nep5CounterStore{
+				d: nftCounterStore{
 					txPK:      tx.ID,
 					applogIdx: applogIdx,
 				},
@@ -300,63 +297,63 @@ func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store
 	}
 }
 
-func handleMigrate(opCodeDataStack *smartcontract.DataStack, nep5StoreChan chan<- *nep5Store, tx *tx.Transaction) {
-	scriptHash := opCodeDataStack.PopData()
-	oldAssetID := util.GetAssetIDFromScriptHash(scriptHash)
-	if len(oldAssetID) != 40 {
-		nep5StoreChan <- &nep5Store{
-			t: 3,
-			d: nep5CounterStore{
-				txPK:      tx.ID,
-				applogIdx: -1,
-			},
-		}
-		return
-	}
+// func handleMigrate(opCodeDataStack *smartcontract.DataStack, nep5StoreChan chan<- *nep5Store, tx *tx.Transaction) {
+// 	scriptHash := opCodeDataStack.PopData()
+// 	oldAssetID := util.GetAssetIDFromScriptHash(scriptHash)
+// 	if len(oldAssetID) != 40 {
+// 		nep5StoreChan <- &nep5Store{
+// 			t: 3,
+// 			d: nep5CounterStore{
+// 				txPK:      tx.ID,
+// 				applogIdx: -1,
+// 			},
+// 		}
+// 		return
+// 	}
 
-	newAssetAdmin, newAssetID, ok := handleNep5RegTx(nep5StoreChan, tx, opCodeDataStack)
-	if !ok {
-		nep5StoreChan <- &nep5Store{
-			t: 3,
-			d: nep5CounterStore{
-				txPK:      tx.ID,
-				applogIdx: -1,
-			},
-		}
-		return
-	}
+// 	newAssetAdmin, newAssetID, ok := handleNep5RegTx(nep5StoreChan, tx, opCodeDataStack)
+// 	if !ok {
+// 		nep5StoreChan <- &nep5Store{
+// 			t: 3,
+// 			d: nep5CounterStore{
+// 				txPK:      tx.ID,
+// 				applogIdx: -1,
+// 			},
+// 		}
+// 		return
+// 	}
 
-	nep5StoreChan <- &nep5Store{
-		t: 4,
-		d: nep5MigrateStore{
-			newAssetAdmin: newAssetAdmin,
-			oldAssetID:    oldAssetID,
-			newAssetID:    newAssetID,
-			txPK:          tx.ID,
-			txID:          tx.TxID,
-		},
-	}
-}
+// 	nep5StoreChan <- &nep5Store{
+// 		t: 4,
+// 		d: nep5MigrateStore{
+// 			newAssetAdmin: newAssetAdmin,
+// 			oldAssetID:    oldAssetID,
+// 			newAssetID:    newAssetID,
+// 			txPK:          tx.ID,
+// 			txID:          tx.TxID,
+// 		},
+// 	}
+// }
 
-func handleNep5Store(nep5Store <-chan *nep5Store) {
+func handleNftStore(nftStore <-chan *nftStore) {
 	defer mail.AlertIfErr()
 
-	for s := range nep5Store {
+	for s := range nftStore {
 		txPK := uint(0)
 
 		switch s.t {
 		case 0:
-			txPK = handleNep5AssetStore(s)
+			txPK = handleNftAssetStore(s)
 		case 1:
-			txPK = handleNep5TxStore(s)
+			txPK = handleNftTxStore(s)
 		case 2:
-			txPK = handleNep5BalanceTotalSupplyStore(s)
+			txPK = handleNftBalanceTotalSupplyStore(s)
 		case 3:
-			txPK = handleNep5CounterStore(s)
+			txPK = handleNftCounterStore(s)
 		case 4:
-			txPK = handleNEP5Migrate(s)
+			// txPK = handleNEP5Migrate(s)
 		default:
-			err := fmt.Errorf("error nep5 store type %d: %+v", s.t, s.d)
+			err := fmt.Errorf("error nft store type %d: %+v", s.t, s.d)
 			panic(err)
 		}
 
@@ -364,15 +361,15 @@ func handleNep5Store(nep5Store <-chan *nep5Store) {
 	}
 }
 
-func handleNep5AssetStore(s *nep5Store) uint {
-	d, ok := s.d.(nep5AssetStore)
+func handleNftAssetStore(s *nftStore) uint {
+	d, ok := s.d.(nftAssetStore)
 	if !ok {
-		err := fmt.Errorf("error nep5 store type %d: %+v", s.t, s.d)
+		err := fmt.Errorf("error nft store type %d: %+v", s.t, s.d)
 		panic(err)
 	}
 
-	err := db.InsertNep5Asset(d.tx,
-		d.nep5,
+	err := db.InsertNftAsset(d.tx,
+		d.nft,
 		d.regInfo,
 		d.addrAsset,
 		d.atHeight)
@@ -383,14 +380,14 @@ func handleNep5AssetStore(s *nep5Store) uint {
 	return d.tx.ID
 }
 
-func handleNep5TxStore(s *nep5Store) uint {
-	d, ok := s.d.(nep5TxStore)
+func handleNftTxStore(s *nftStore) uint {
+	d, ok := s.d.(nftTxStore)
 	if !ok {
-		err := fmt.Errorf("error nep5 store type %d: %+v", s.t, s.d)
+		err := fmt.Errorf("error nft store type %d: %+v", s.t, s.d)
 		panic(err)
 	}
 
-	err := db.InsertNep5transaction(d.tx,
+	err := db.InsertNfttransaction(d.tx,
 		d.applogIdx,
 		d.assetID,
 		d.fromAddr,
@@ -406,14 +403,14 @@ func handleNep5TxStore(s *nep5Store) uint {
 	return d.tx.ID
 }
 
-func handleNep5BalanceTotalSupplyStore(s *nep5Store) uint {
-	d, ok := s.d.(nep5BalanceTSStore)
+func handleNftBalanceTotalSupplyStore(s *nftStore) uint {
+	d, ok := s.d.(nftBalanceTSStore)
 	if !ok {
-		err := fmt.Errorf("error nep5 store type %d: %+v", s.t, s.d)
+		err := fmt.Errorf("error nft store type %d: %+v", s.t, s.d)
 		panic(err)
 	}
 
-	err := db.UpdateNep5TotalSupplyAndAddrAsset(
+	err := db.UpdateNftTotalSupplyAndAddrAsset(
 		d.blockTime,
 		d.blockIndex,
 		d.addr,
@@ -427,10 +424,10 @@ func handleNep5BalanceTotalSupplyStore(s *nep5Store) uint {
 	return d.txPK
 }
 
-func handleNep5CounterStore(s *nep5Store) uint {
-	d, ok := s.d.(nep5CounterStore)
+func handleNftCounterStore(s *nftStore) uint {
+	d, ok := s.d.(nftCounterStore)
 	if !ok {
-		err := fmt.Errorf("error nep5 store type %d: %+v", s.t, s.d)
+		err := fmt.Errorf("error nft store type %d: %+v", s.t, s.d)
 		panic(err)
 	}
 
@@ -442,62 +439,62 @@ func handleNep5CounterStore(s *nep5Store) uint {
 	return d.txPK
 }
 
-func handleNep5RegTx(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, opCodeDataStack *smartcontract.DataStack) (string, string, bool) {
+func handleNftRegTx(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCodeDataStack *smartcontract.DataStack) (string, string, bool) {
 	adminAddr, ok := getCallerAddr(tx)
 	if !ok {
 		return "", "", false
 	}
 
-	regInfo, ok := nep5.GetNep5RegInfo(tx.TxID, opCodeDataStack)
+	regInfo, ok := nft.GetNftRegInfo(tx.TxID, opCodeDataStack)
 	if !ok {
 		return "", "", false
 	}
 
 	assetID := util.GetAssetIDFromScriptHash(regInfo.ScriptHash)
-	if _, ok := nep5AssetDecimals[assetID]; ok {
+	if _, ok := nftAssetDecimals[assetID]; ok {
 		return util.GetAddressFromScriptHash(adminAddr), assetID, true
 	}
 
 	// Get nep5 definitions to make sure it is nep5.
-	nep5, addrAsset, atHeight, ok := queryNep5AssetInfo(tx, regInfo.ScriptHash, adminAddr)
+	nft, addrAsset, atHeight, ok := queryNftAssetInfo(tx, regInfo.ScriptHash, adminAddr)
 	if !ok {
 		return "", "", false
 	}
 
 	// Cache total supply.
-	cache.UpdateAssetTotalSupply(nep5.AssetID, nep5.TotalSupply, atHeight)
+	cache.UpdateAssetTotalSupply(nft.AssetID, nft.TotalSupply, atHeight)
 
-	nep5StoreChan <- &nep5Store{
+	nftStoreChan <- &nftStore{
 		t: 0,
-		d: nep5AssetStore{
+		d: nftAssetStore{
 			tx:        tx,
-			nep5:      nep5,
+			nft:       nft,
 			regInfo:   regInfo,
 			addrAsset: addrAsset,
 			atHeight:  atHeight,
 		},
 	}
 
-	nep5AssetDecimals[nep5.AssetID] = nep5.Decimals
+	nftAssetDecimals[nft.AssetID] = nft.Decimals
 	return util.GetAddressFromScriptHash(adminAddr), assetID, true
 }
 
-func handleNEP5Migrate(s *nep5Store) uint {
-	d, ok := s.d.(nep5MigrateStore)
-	if !ok {
-		err := fmt.Errorf("err nep5 migrate store type %d: %+v", s.t, s.d)
-		panic(err)
-	}
+// func handleNEP5Migrate(s *nep5Store) uint {
+// 	d, ok := s.d.(nep5MigrateStore)
+// 	if !ok {
+// 		err := fmt.Errorf("err nep5 migrate store type %d: %+v", s.t, s.d)
+// 		panic(err)
+// 	}
 
-	err := db.HandleNEP5Migrate(d.newAssetAdmin, d.oldAssetID, d.newAssetID, d.txPK, d.txID)
-	if err != nil {
-		panic(err)
-	}
+// 	err := db.HandleNEP5Migrate(d.newAssetAdmin, d.oldAssetID, d.newAssetID, d.txPK, d.txID)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	return d.txPK
-}
+// 	return d.txPK
+// }
 
-func handleNep5NonTxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, opCodeDataStack *smartcontract.DataStack) {
+func handleNftNonTxCall(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCodeDataStack *smartcontract.DataStack) {
 	// At least two commands are required(opCode and its related data).
 	for len(*opCodeDataStack) >= 2 {
 		opCode, data := opCodeDataStack.PopItem()
@@ -523,7 +520,7 @@ func handleNep5NonTxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, op
 			continue
 		}
 
-		totalSupply, ok := queryNep5TotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
+		totalSupply, ok := queryNftTotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
 		if !ok {
 			continue
 		}
@@ -536,9 +533,9 @@ func handleNep5NonTxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, op
 		callerAddrStr := util.GetAddressFromScriptHash(callerAddr)
 		assetID := util.GetAssetIDFromScriptHash(scriptHash)
 
-		nep5StoreChan <- &nep5Store{
+		nftStoreChan <- &nftStore{
 			t: 2,
-			d: nep5BalanceTSStore{
+			d: nftBalanceTSStore{
 				txPK:        tx.ID,
 				blockTime:   tx.BlockTime,
 				blockIndex:  tx.BlockIndex,
@@ -551,7 +548,7 @@ func handleNep5NonTxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, op
 	}
 }
 
-func handleNep5TxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, notifs []rpc.RawNotifications, applogIdx int) {
+func handleNftTxCall(nftStoreChan chan<- *nftStore, tx *tx.Transaction, notifs []rpc.RawNotifications, applogIdx int) {
 	// Get all transfers.
 	for applogIdx++; applogIdx < len(notifs); applogIdx++ {
 		notification := notifs[applogIdx]
@@ -588,15 +585,15 @@ func handleNep5TxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, notif
 		assetID := notification.Contract[2:]
 
 		// Check if this is a valid assetID.
-		if _, ok := nep5AssetDecimals[assetID]; !ok {
+		if _, ok := nftAssetDecimals[assetID]; !ok {
 			continue
 		}
 
-		recordNep5Transfer(nep5StoreChan, tx, assetID, fromSc, toSc, val, valType, applogIdx)
+		recordNftTransfer(nftStoreChan, tx, assetID, fromSc, toSc, val, valType, applogIdx)
 	}
 }
 
-func recordNep5Transfer(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, assetID string, fromSc string, toSc string, val string, valType string, applogIdx int) {
+func recordNftTransfer(nftStoreChan chan<- *nftStore, tx *tx.Transaction, assetID string, fromSc string, toSc string, val string, valType string, applogIdx int) {
 	scriptHash := util.GetScriptHashFromAssetID(assetID)
 
 	// 'From' address may be empty(when issuing an asset).
@@ -627,12 +624,12 @@ func recordNep5Transfer(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, ass
 	// Handle possibility of storage injection attack.
 	var totalSupply *big.Float
 	if toSc == "746f74616c537570706c79" {
-		totalSupply, _ = queryNep5TotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
+		totalSupply, _ = queryNftTotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
 	}
 
-	nep5StoreChan <- &nep5Store{
+	nftStoreChan <- &nftStore{
 		t: 1,
-		d: nep5TxStore{
+		d: nftTxStore{
 			tx:            tx,
 			applogIdx:     applogIdx,
 			assetID:       assetID,
@@ -646,83 +643,90 @@ func recordNep5Transfer(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, ass
 	}
 }
 
-func getTransferValue(assetID string, val string, valType string) (*big.Float, bool) {
-	value, ok := extractValue(val, valType)
-	if !ok {
-		return nil, false
-	}
+// func getTransferValue(assetID string, val string, valType string) (*big.Float, bool) {
+// 	value, ok := extractValue(val, valType)
+// 	if !ok {
+// 		return nil, false
+// 	}
 
-	return getReadableValue(assetID, value), true
-}
+// 	return getReadableValue(assetID, value), true
+// }
 
-func extractValue(val interface{}, valType string) (*big.Float, bool) {
-	switch valType {
-	case "Integer":
-		v, err := strconv.ParseInt(val.(string), 10, 64)
-		if err != nil {
-			return nil, false
-		}
+// func extractValue(val interface{}, valType string) (*big.Float, bool) {
+// 	switch valType {
+// 	case "Integer":
+// 		v, err := strconv.ParseInt(val.(string), 10, 64)
+// 		if err != nil {
+// 			return nil, false
+// 		}
 
-		return new(big.Float).SetInt64(v), true
-	case "ByteArray":
-		valueBytes, err := hex.DecodeString(val.(string))
-		if err != nil {
-			return nil, false
-		}
+// 		return new(big.Float).SetInt64(v), true
+// 	case "ByteArray":
+// 		valueBytes, err := hex.DecodeString(val.(string))
+// 		if err != nil {
+// 			return nil, false
+// 		}
 
-		return util.BytesToBigFloat(valueBytes), true
-	case "Array":
-		arr := val.([]interface{})
-		if len(arr) == 0 {
-			return big.NewFloat(0), true
-		}
-		if len(arr) == 2 {
-			return extractValue(arr[0], arr[1].(string))
-		}
+// 		return util.BytesToBigFloat(valueBytes), true
+// 	case "Array":
+// 		arr := val.([]interface{})
+// 		if len(arr) == 0 {
+// 			return big.NewFloat(0), true
+// 		}
+// 		if len(arr) == 2 {
+// 			return extractValue(arr[0], arr[1].(string))
+// 		}
 
-		return nil, false
-	default:
-		return nil, false
-	}
-}
+// 		return nil, false
+// 	default:
+// 		return nil, false
+// 	}
+// }
 
-func getCallerAddr(tx *tx.Transaction) ([]byte, bool) {
-	txScrpits, err := db.GetTxScripts(tx.TxID)
-	if err != nil {
-		panic(err)
-	}
+// func getCallerAddr(tx *tx.Transaction) ([]byte, bool) {
+// 	txScrpits, err := db.GetNftTxScripts(tx.TxID)
+// 	if err != nil {
+// 		panic(err)
+// 	}
 
-	if txScrpits == nil || txScrpits[0].Verification == "" {
-		return nil, false
-	}
+// 	if txScrpits == nil || txScrpits[0].Verification == "" {
+// 		return nil, false
+// 	}
 
-	verification, _ := hex.DecodeString(txScrpits[0].Verification)
-	callerAddr := util.GetScriptHash(verification)
+// 	verification, _ := hex.DecodeString(txScrpits[0].Verification)
+// 	callerAddr := util.GetScriptHash(verification)
 
-	return callerAddr, true
-}
+// 	return callerAddr, true
+// }
 
-func isNep5RegistrationTx(script string) bool {
+func isNftRegistrationTx(script string) bool {
 	//totalSupply
 	if strings.Contains(script, "746f74616c537570706c79") &&
 		//	name
 		strings.Contains(script, "6e616d65") &&
 		//symbol
 		strings.Contains(script, "73796d626f6c") &&
-		strings.Contains(script, "646563696d616c73") {
+		//decimals
+		strings.Contains(script, "646563696d616c73") &&
+		//ownerOf
+		strings.Contains(script, "6f776e65724f66") &&
+		//tokensOf
+		strings.Contains(script, "746f6b656e734f66") &&
+		//properties
+		strings.Contains(script, "70726f70657274696573") {
 		return true
 	}
 
 	return false
 }
 
-func isNep5MigrateTx(script string) bool {
-	// Neo.Contract.Migrate: 4e656f2e436f6e74726163742e4d696772617465
-	keyword := "68144e656f2e436f6e74726163742e4d696772617465"
-	return strings.Contains(script, keyword)
-}
+// func isNep5MigrateTx(script string) bool {
+// 	// Neo.Contract.Migrate: 4e656f2e436f6e74726163742e4d696772617465
+// 	keyword := "68144e656f2e436f6e74726163742e4d696772617465"
+// 	return strings.Contains(script, keyword)
+// }
 
-func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) (*nep5.Nep5, *addr.Asset, uint, bool) {
+func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) (*nft.Nft, *addr.Asset, uint, bool) {
 	assetID := util.GetAssetIDFromScriptHash(scriptHash)
 	adminAddr := util.GetAddressFromScriptHash(addrBytes)
 
@@ -730,6 +734,9 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	scripts += createSCSB(scriptHash, "symbol", nil)
 	scripts += createSCSB(scriptHash, "decimals", nil)
 	scripts += createSCSB(scriptHash, "totalSupply", nil)
+	scripts += createSCSB(scriptHash, "ownerOf", nil)
+	scripts += createSCSB(scriptHash, "tokensOf", nil)
+	scripts += createSCSB(scriptHash, "properties", nil)
 	scripts += createSCSB(scriptHash, "balanceOf", [][]byte{addrBytes})
 
 	minHeight := getMinHeight(tx.BlockIndex)
@@ -737,7 +744,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	if result == nil || strings.Contains(result.State, "FAULT") {
 		return nil, nil, 0, false
 	}
-	if len(result.Stack) < 5 {
+	if len(result.Stack) < 7 {
 		return nil, nil, 0, false
 	}
 
@@ -779,7 +786,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	}
 	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 
-	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[4].Type)
+	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[7].Type)
 	if !ok {
 		return nil, nil, 0, false
 	}
@@ -789,7 +796,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 
 	addrHasBalance := adminBalance.Cmp(big.NewFloat(0))
 
-	nep5 := &nep5.Nep5{
+	nft := &nft.Nft{
 		AssetID:          assetID,
 		AdminAddress:     adminAddr,
 		Name:             name,
@@ -820,10 +827,10 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 		}
 	}
 
-	return nep5, addrAsset, uint(minHeight), true
+	return nft, addrAsset, uint(minHeight), true
 }
 
-func createNep5BalanceSCSB(scriptHash []byte, addrBytes []byte) string {
+func createNftBalanceSCSB(scriptHash []byte, addrBytes []byte) string {
 	if len(addrBytes) == 0 {
 		return ""
 	}
@@ -831,111 +838,111 @@ func createNep5BalanceSCSB(scriptHash []byte, addrBytes []byte) string {
 	return createSCSB(scriptHash, "balanceOf", [][]byte{addrBytes})
 }
 
-func createSCSB(scriptHash []byte, method string, params [][]byte) string {
-	scsb := smartcontract.ScriptBuilder{
-		ScriptHash: scriptHash,
-		Method:     method,
-		Params:     params,
-	}
+// func createSCSB(scriptHash []byte, method string, params [][]byte) string {
+// 	scsb := smartcontract.ScriptBuilder{
+// 		ScriptHash: scriptHash,
+// 		Method:     method,
+// 		Params:     params,
+// 	}
 
-	return scsb.GetScript()
-}
+// 	return scsb.GetScript()
+// }
 
-func queryCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byte, callerAddrBytes []byte) (*big.Float, bool) {
-	assetID := util.GetAssetIDFromScriptHash(scriptHash)
-	callerAddr := util.GetAddressFromScriptHash(callerAddrBytes)
+// func queryCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byte, callerAddrBytes []byte) (*big.Float, bool) {
+// 	assetID := util.GetAssetIDFromScriptHash(scriptHash)
+// 	callerAddr := util.GetAddressFromScriptHash(callerAddrBytes)
 
-	// Query from cache.
-	if cached, ok := cache.GetAddrAsset(callerAddr, assetID); ok {
-		// If cache valid.
-		if cached.BlockIndex > txBlockIndex {
-			return cached.Balance, true
-		}
-	}
+// 	// Query from cache.
+// 	if cached, ok := cache.GetAddrAsset(callerAddr, assetID); ok {
+// 		// If cache valid.
+// 		if cached.BlockIndex > txBlockIndex {
+// 			return cached.Balance, true
+// 		}
+// 	}
 
-	decimals, ok := nep5AssetDecimals[assetID]
-	if !ok {
-		return big.NewFloat(0), false
-	}
+// 	decimals, ok := nep5AssetDecimals[assetID]
+// 	if !ok {
+// 		return big.NewFloat(0), false
+// 	}
 
-	scripts := createSCSB(scriptHash, "balanceOf", [][]byte{callerAddrBytes})
+// 	scripts := createSCSB(scriptHash, "balanceOf", [][]byte{callerAddrBytes})
 
-	minHeight := rpc.BestHeight.Get()
-	result := rpc.SmartContractRPCCall(minHeight, scripts)
-	if result == nil ||
-		strings.Contains(result.State, "FAULT") ||
-		result.Stack == nil ||
-		len(result.Stack) == 0 {
-		return big.NewFloat(0), false
-	}
+// 	minHeight := rpc.BestHeight.Get()
+// 	result := rpc.SmartContractRPCCall(minHeight, scripts)
+// 	if result == nil ||
+// 		strings.Contains(result.State, "FAULT") ||
+// 		result.Stack == nil ||
+// 		len(result.Stack) == 0 {
+// 		return big.NewFloat(0), false
+// 	}
 
-	callerBalance, ok := extractValue(result.Stack[0].Value, result.Stack[0].Type)
-	if !ok {
-		return big.NewFloat(0), false
-	}
-	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
+// 	callerBalance, ok := extractValue(result.Stack[0].Value, result.Stack[0].Type)
+// 	if !ok {
+// 		return big.NewFloat(0), false
+// 	}
+// 	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
 
-	return callerBalance, true
-}
+// 	return callerBalance, true
+// }
 
-func queryBalances(txBlockIndex uint, scriptHash []byte, assetID string, addrBytesList [][]byte) ([]*big.Float, bool) {
-	// Check if this is a valid assetID.
-	if _, ok := nep5AssetDecimals[assetID]; !ok {
-		return nil, false
-	}
+// func queryBalances(txBlockIndex uint, scriptHash []byte, assetID string, addrBytesList [][]byte) ([]*big.Float, bool) {
+// 	// Check if this is a valid assetID.
+// 	if _, ok := nep5AssetDecimals[assetID]; !ok {
+// 		return nil, false
+// 	}
 
-	balances := make([]*big.Float, len(addrBytesList))
+// 	balances := make([]*big.Float, len(addrBytesList))
 
-	scsb := ""
+// 	scsb := ""
 
-	for idx, addrBytes := range addrBytesList {
-		if len(addrBytes) == 0 {
-			balances[idx] = big.NewFloat(0)
-		} else {
-			// Check cached value.
-			addr := util.GetAddressFromScriptHash(addrBytes)
-			if cached, ok := cache.GetAddrAsset(addr, assetID); ok {
-				// If cache valid.
-				if cached.BlockIndex > txBlockIndex {
-					balances[idx] = cached.Balance
-					continue
-				}
-			}
+// 	for idx, addrBytes := range addrBytesList {
+// 		if len(addrBytes) == 0 {
+// 			balances[idx] = big.NewFloat(0)
+// 		} else {
+// 			// Check cached value.
+// 			addr := util.GetAddressFromScriptHash(addrBytes)
+// 			if cached, ok := cache.GetAddrAsset(addr, assetID); ok {
+// 				// If cache valid.
+// 				if cached.BlockIndex > txBlockIndex {
+// 					balances[idx] = cached.Balance
+// 					continue
+// 				}
+// 			}
 
-			// Query balance
-			scsb += createNep5BalanceSCSB(scriptHash, addrBytes)
-		}
-	}
+// 			// Query balance
+// 			scsb += createNep5BalanceSCSB(scriptHash, addrBytes)
+// 		}
+// 	}
 
-	minHeight := rpc.BestHeight.Get()
-	result := rpc.SmartContractRPCCall(minHeight, scsb)
+// 	minHeight := rpc.BestHeight.Get()
+// 	result := rpc.SmartContractRPCCall(minHeight, scsb)
 
-	// If this nep5 asset is broken(for example forgot to check 'need storage').
-	if result == nil || strings.Contains(result.State, "FAULT") {
-		return nil, false
-	}
+// 	// If this nep5 asset is broken(for example forgot to check 'need storage').
+// 	if result == nil || strings.Contains(result.State, "FAULT") {
+// 		return nil, false
+// 	}
 
-	idx := 0
+// 	idx := 0
 
-	for i := 0; i < len(addrBytesList); i++ {
-		addrBytes := addrBytesList[i]
+// 	for i := 0; i < len(addrBytesList); i++ {
+// 		addrBytes := addrBytesList[i]
 
-		if len(addrBytes) == 0 || balances[i] != nil {
-			continue
-		}
+// 		if len(addrBytes) == 0 || balances[i] != nil {
+// 			continue
+// 		}
 
-		balance, ok := extractValue(result.Stack[idx].Value, result.Stack[idx].Type)
-		if !ok {
-			continue
-		}
-		balances[i] = getReadableValue(assetID, balance)
-		idx++
-	}
+// 		balance, ok := extractValue(result.Stack[idx].Value, result.Stack[idx].Type)
+// 		if !ok {
+// 			continue
+// 		}
+// 		balances[i] = getReadableValue(assetID, balance)
+// 		idx++
+// 	}
 
-	return balances, true
-}
+// 	return balances, true
+// }
 
-func queryNep5TotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte) (*big.Float, bool) {
+func queryNftTotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte) (*big.Float, bool) {
 	assetID := util.GetAssetIDFromScriptHash(scriptHash)
 
 	decimals, ok := nep5AssetDecimals[assetID]
@@ -993,24 +1000,24 @@ func queryNep5TotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte
 	return totalSupply, true
 }
 
-func getReadableValue(assetID string, balance *big.Float) *big.Float {
-	zeroValue := big.NewFloat(0)
-	if balance.Cmp(zeroValue) == 0 {
-		return zeroValue
-	}
+// func getReadableValue(assetID string, balance *big.Float) *big.Float {
+// 	zeroValue := big.NewFloat(0)
+// 	if balance.Cmp(zeroValue) == 0 {
+// 		return zeroValue
+// 	}
 
-	decimals, ok := nep5AssetDecimals[assetID]
-	if !ok {
-		panic("Failed to get decimals of nep5 asset: " + assetID)
-	}
+// 	decimals, ok := nep5AssetDecimals[assetID]
+// 	if !ok {
+// 		panic("Failed to get decimals of nep5 asset: " + assetID)
+// 	}
 
-	return new(big.Float).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
-}
+// 	return new(big.Float).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
+// }
 
-func showNep5Progress(txPk uint) {
-	if maxNep5PK == 0 || Nep5MaxPkShouldRefresh {
-		Nep5MaxPkShouldRefresh = false
-		maxNep5PK = db.GetMaxNonEmptyScriptTxPk()
+func showNftProgress(txPk uint) {
+	if maxNftPK == 0 || nftMaxPkShouldRefresh {
+		nftMaxPkShouldRefresh = false
+		maxNftPK = db.GetMaxNonEmptyScriptTxPk()
 	}
 
 	now := time.Now()
@@ -1044,15 +1051,15 @@ func showNep5Progress(txPk uint) {
 		}
 
 		msg := fmt.Sprintf("Init time: %v\nEnd Time: %v\n", nProgress.InitTime, time.Now())
-		mail.SendNotify("NEP5 TX Fully Synced", msg)
+		mail.SendNotify("nft TX Fully Synced", msg)
 	}
 }
 
-func getMinHeight(blockHeight uint) int {
-	bestHeight := rpc.BestHeight.Get()
-	if bestHeight > int(blockHeight) {
-		return bestHeight
-	}
+// func getMinHeight(blockHeight uint) int {
+// 	bestHeight := rpc.BestHeight.Get()
+// 	if bestHeight > int(blockHeight) {
+// 		return bestHeight
+// 	}
 
-	return int(blockHeight)
-}
+// 	return int(blockHeight)
+// }
