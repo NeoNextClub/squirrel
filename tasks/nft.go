@@ -130,7 +130,8 @@ func fetchNftTx(nftTxChan chan<- *nftTxInfo, applogChan chan<- *tx.Transaction, 
 
 		for i := len(txs) - 1; i >= 0; i-- {
 			// cannot be app call
-			if len(txs[i].Script) <= 42 {
+			if len(txs[i].Script) <= 42 ||
+				txs[i].TxID == "0xb00a0d7b752ba935206e1db67079c186ba38a4696d3afe28814a4834b2254cbe" {
 				txs = append(txs[:i], txs[i+1:]...)
 			}
 		}

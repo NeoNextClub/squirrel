@@ -49,7 +49,8 @@ create table address
     created_at            bigint unsigned not null,
     last_transaction_time bigint unsigned not null,
     trans_asset           bigint unsigned not null,
-    trans_nep5            bigint unsigned not null
+    trans_nep5            bigint unsigned not null,
+    trans_nft             bigint unsigned not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
 create unique index uk_address
