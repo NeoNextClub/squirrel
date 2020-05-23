@@ -19,7 +19,6 @@ var (
 // Init connects to the configured mysql database.
 func Init() {
 	var err error
-	//log.Printf(config.GetDbConnStr())
 	db, err = sql.Open("mysql", config.GetDbConnStr())
 	if err != nil {
 		panic(err)
@@ -76,7 +75,7 @@ func transact(txFunc func(*sql.Tx) error) (err error) {
 		if !connErr(err) {
 			return err
 		}
-		log.Printf("***************************************")
+
 		reconnect()
 		return transact(txFunc)
 	}
@@ -99,7 +98,7 @@ func transact(txFunc func(*sql.Tx) error) (err error) {
 	if err == nil || !connErr(err) {
 		return err
 	}
-	log.Printf("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
+
 	reconnect()
 	return transact(txFunc)
 }

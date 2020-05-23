@@ -15,14 +15,12 @@ func GetAddrAssetInfo() []*addr.AssetInfo {
 	const query = "SELECT `address`.`address`, `address`.`created_at`, `address`.`last_transaction_time`, `addr_asset`.`asset_id`, `addr_asset`.`balance` FROM `addr_asset` LEFT JOIN `address` ON `address`.`address`=`addr_asset`.`address`"
 
 	result := []*addr.AssetInfo{}
-	//
-	log.Printf("*********************" + query)
 	rows, err := wrappedQuery(query)
 	if err != nil {
 		panic(err)
 	}
 	defer rows.Close()
-	//log.Printf("&&&&&&&&&&&&&&&&&&&&&&&" + query)
+
 	for rows.Next() {
 		m := &addr.AssetInfo{}
 		var balanceStr string
@@ -43,7 +41,7 @@ func GetAddrAssetInfo() []*addr.AssetInfo {
 
 		result = append(result, m)
 	}
-	//log.Printf("^^^^^^^^^^^^^^^^^^^" + result.Address(string))
+
 	return result
 }
 

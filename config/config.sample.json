@@ -6,8 +6,8 @@
     "database": "DATABASE",
 
     "rpc_url": [
-        "47.96.97.227:20332",
-        "47.96.91.138:20332"
+        "RPC_URL1",
+        "RPC_URL2"
     ],
 
     "label": "mainnet",

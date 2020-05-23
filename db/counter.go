@@ -113,7 +113,6 @@ func getCounterInstance() Counter {
 	case nil:
 		return counter
 	default:
-		// log.printf("%%%%%%%%%%%%%%%%%%%%%%%%")
 		reconnect()
 		return getCounterInstance()
 	}
