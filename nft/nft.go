@@ -50,7 +50,7 @@ type Transaction struct {
 	BlockTime  uint64
 }
 
-// Tx represents nep5 transaction model.
+// Tx represents nft transaction model.
 type Tx struct {
 	ID    uint
 	TxID  string
@@ -60,7 +60,7 @@ type Tx struct {
 }
 
 // GetNftRegInfo extracts op codes from stack,
-// and returns nep5 reg info if stack valid.
+// and returns nft reg info if stack valid.
 func GetNftRegInfo(txID string, opCodeDataStack *smartcontract.DataStack) (*NftRegInfo, bool) {
 	if len(*opCodeDataStack) < 9 {
 		return nil, false

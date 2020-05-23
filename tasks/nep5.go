@@ -265,10 +265,10 @@ func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store
 		if applogIdx == -1 && isNep5RegistrationTx(tx.Script) {
 			handleNep5RegTx(nep5StoreChan, tx, opCodeDataStack.Copy())
 			if isNep5MigrateTx((tx.Script)) {
-				handleMigrate(opCodeDataStack, nep5StoreChan, tx)
+				handleNep5Migrate(opCodeDataStack, nep5StoreChan, tx)
 			}
 		} else if applogIdx == -1 && isNep5MigrateTx(tx.Script) {
-			handleMigrate(opCodeDataStack, nep5StoreChan, tx)
+			handleNep5Migrate(opCodeDataStack, nep5StoreChan, tx)
 		} else {
 			handleNep5NonTxCall(nep5StoreChan, tx, opCodeDataStack)
 
@@ -300,7 +300,7 @@ func handleNep5Tx(nep5TxChan <-chan *nep5TxInfo, nep5StoreChan chan<- *nep5Store
 	}
 }
 
-func handleMigrate(opCodeDataStack *smartcontract.DataStack, nep5StoreChan chan<- *nep5Store, tx *tx.Transaction) {
+func handleNep5Migrate(opCodeDataStack *smartcontract.DataStack, nep5StoreChan chan<- *nep5Store, tx *tx.Transaction) {
 	scriptHash := opCodeDataStack.PopData()
 	oldAssetID := util.GetAssetIDFromScriptHash(scriptHash)
 	if len(oldAssetID) != 40 {
@@ -703,12 +703,13 @@ func getCallerAddr(tx *tx.Transaction) ([]byte, bool) {
 }
 
 func isNep5RegistrationTx(script string) bool {
-	//totalSupply
+	// totalSupply
 	if strings.Contains(script, "746f74616c537570706c79") &&
-		//	name
+		// name
 		strings.Contains(script, "6e616d65") &&
-		//symbol
+		// symbol
 		strings.Contains(script, "73796d626f6c") &&
+		// decimals
 		strings.Contains(script, "646563696d616c73") {
 		return true
 	}
@@ -960,7 +961,7 @@ func queryNep5TotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte
 		return nil, false
 	}
 
-	// Get first valid result
+	// Get the first valid result
 	// Terrible tx example:
 	/*
 		curl -X POST \
