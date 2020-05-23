@@ -138,7 +138,7 @@ create table counter
     nft_app_log_idx        int          not null,
     last_tx_pk_for_sc      int unsigned not null,
     nep5_tx_pk_for_addr_tx int unsigned not null,
-    nft_tx_pk_for_addr_tx int unsigned not null,
+    nft_tx_pk_for_addr_tx  int unsigned not null,
     last_tx_pk_gas_balance int unsigned not null,
     cnt_addr               int unsigned not null,
     cnt_tx_reg             int unsigned not null,
