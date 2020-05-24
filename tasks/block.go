@@ -106,7 +106,7 @@ func arrangeBlock(dbHeight int, queue chan<- *rpc.RawBlock) {
 			log.Printf("Waited for %d seconds for block height [%d] in [arrangeBlock]\n", delay/1000, height)
 		}
 
-		if delay%(1000*60) == 0 {
+		if delay%(1000*10) == 0 {
 			err := fmt.Errorf("block height %d is missing while downloading blocks", height)
 			log.Println(err)
 
