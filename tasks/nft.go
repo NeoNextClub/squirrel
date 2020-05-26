@@ -11,6 +11,7 @@ import (
 	"squirrel/mail"
 	"squirrel/nft"
 	"squirrel/smartcontract"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -609,6 +610,11 @@ func getNftTokenID(str, valType string) (string, bool) {
 	case "Integer":
 		return str, true
 	case "ByteArray":
+		byteToInteger, err := strconv.ParseInt(string([]byte(str)), 10, 64)
+		if err == nil {
+			return strconv.FormatInt(byteToInteger, 10), true
+		}
+
 		bytes, err := hex.DecodeString(str)
 		if err != nil {
 			log.Error.Printf("getNftTokenID(%s, %s) failed: %v", str, valType, err)
@@ -667,7 +673,7 @@ func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) 
 	if result == nil || strings.Contains(result.State, "FAULT") {
 		return nil, nil, 0, false
 	}
-	if len(result.Stack) < 7 {
+	if len(result.Stack) < 5 {
 		return nil, nil, 0, false
 	}
 
@@ -709,7 +715,7 @@ func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) 
 	}
 	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 
-	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[7].Type)
+	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[4].Type)
 	if !ok {
 		return nil, nil, 0, false
 	}

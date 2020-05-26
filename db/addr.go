@@ -91,8 +91,8 @@ func updateAddrInfo(tx *sql.Tx, blockTime uint64, txID string, addr string, asse
 func createAddrInfoIfNotExist(tx *sql.Tx, blockTime uint64, addr string) (bool, error) {
 	_, created := cache.GetAddrOrCreate(addr, blockTime)
 	if created {
-		const createAddrQuery = "INSERT INTO `address` (`address`, `created_at`, `last_transaction_time`, `trans_asset`, `trans_nep5`) VALUES (?, ?, ?, ?, ?)"
-		_, err := tx.Exec(createAddrQuery, addr, blockTime, blockTime, 0, 0)
+		const createAddrQuery = "INSERT INTO `address` (`address`, `created_at`, `last_transaction_time`, `trans_asset`, `trans_nep5`, `trans_nft`) VALUES (?, ?, ?, ?, ?, ?)"
+		_, err := tx.Exec(createAddrQuery, addr, blockTime, blockTime, 0, 0, 0)
 		return true, err
 	}
 
