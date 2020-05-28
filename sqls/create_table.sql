@@ -9,7 +9,7 @@ SET GLOBAL BINLOG_FORMAT = 'ROW';
 create table addr_asset
 (
     id           int unsigned auto_increment primary key,
-    address      varchar(128)              not null,
+    address      varchar(128)             not null,
     asset_id     char(66)                 not null,
     balance      decimal(35, 8)           not null,
     transactions bigint unsigned          not null,
@@ -45,12 +45,12 @@ create index addr_tx_address
 create table address
 (
     id                    int unsigned auto_increment primary key,
-    address               varchar(128)     not null,
-    created_at            bigint unsigned not null,
-    last_transaction_time bigint unsigned not null,
-    trans_asset           bigint unsigned not null,
-    trans_nep5            bigint unsigned not null,
-    trans_nft             bigint unsigned not null
+    address               varchar(128)              not null,
+    created_at            bigint unsigned           not null,
+    last_transaction_time bigint unsigned           not null,
+    trans_asset           bigint unsigned           not null,
+    trans_nep5            bigint unsigned default 0 not null,
+    trans_nft             bigint unsigned default 0 not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
 create unique index uk_address
@@ -65,7 +65,7 @@ create table asset
     version      int unsigned     not null,
     asset_id     char(66)         not null,
     type         varchar(32)      not null,
-    name         varchar(128)      not null,
+    name         varchar(128)     not null,
     amount       decimal(35, 8)   not null,
     available    decimal(35, 8)   not null,
     `precision`  tinyint unsigned not null,
@@ -177,7 +177,7 @@ create table nep5
     id                int unsigned auto_increment primary key,
     asset_id          char(40)             not null,
     admin_address     char(40)             not null,
-    name              varchar(128)          not null,
+    name              varchar(128)         not null,
     symbol            varchar(16)          not null,
     decimals          tinyint unsigned     not null,
     total_supply      decimal(35, 8)       not null,
@@ -217,8 +217,8 @@ create table nep5_tx
     id          int unsigned auto_increment primary key,
     txid        char(66)        not null,
     asset_id    char(40)        not null,
-    `from`      varchar(128)     not null,
-    `to`        varchar(128)     not null,
+    `from`      varchar(128)    not null,
+    `to`        varchar(128)    not null,
     value       double          not null,
     block_index int unsigned    not null,
     block_time  bigint unsigned not null
@@ -251,7 +251,7 @@ create table nft
     id                int unsigned auto_increment primary key,
     asset_id          char(40)             not null,
     admin_address     char(40)             not null,
-    name              varchar(128)          not null,
+    name              varchar(128)         not null,
     symbol            varchar(16)          not null,
     decimals          tinyint unsigned     not null,
     total_supply      decimal(35, 8)       not null,
@@ -271,7 +271,7 @@ create index idx_nft_txid
 create table nft_reg_info
 (
     id             int unsigned auto_increment primary key,
-    nft_id        int unsigned not null,
+    nft_id         int unsigned not null,
     name           varchar(255) not null,
     version        varchar(255) not null,
     author         varchar(255) not null,
@@ -312,6 +312,23 @@ create index idx_nft_tx_txid
     on nft_tx(txid);
 
 
+create table addr_asset_nft
+(
+    id           int unsigned auto_increment primary key,
+    address      varchar(128)             not null,
+    asset_id     char(66)                 not null,
+    token_id     char(66)                 not null,
+    created_at   bigint unsigned          not null
+) engine = InnoDB default charset = 'utf8mb4';
+
+
+create table nft_token
+(
+    id           int unsigned auto_increment primary key,
+    asset_id     char(66)                 not null,
+    token_id     char(66)                 not null,
+    info         varchar(4096)            not null
+) engine = InnoDB default charset = 'utf8mb4';
 
 create table tx
 (

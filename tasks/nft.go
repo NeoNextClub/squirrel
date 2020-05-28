@@ -72,6 +72,7 @@ type nftTxStore struct {
 	transferValue *big.Float
 	tokenID       string
 	totalSupply   *big.Float
+	nftJSONInfo   string
 }
 
 type nftBalanceTSStore struct {
@@ -331,7 +332,8 @@ func handleNftTxStore(s *nftStore) uint {
 		panic(err)
 	}
 
-	err := db.InsertNfttransaction(d.tx,
+	err := db.InsertNfttransaction(
+		d.tx,
 		d.applogIdx,
 		d.assetID,
 		d.fromAddr,
@@ -340,7 +342,9 @@ func handleNftTxStore(s *nftStore) uint {
 		d.toBalance,
 		d.transferValue,
 		d.tokenID,
-		d.totalSupply)
+		d.totalSupply,
+		d.nftJSONInfo,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -579,6 +583,12 @@ func recordNftTransfer(nftStoreChan chan<- *nftStore, tx *tx.Transaction, assetI
 		totalSupply, _ = queryNftTotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
 	}
 
+	nftJSONInfo := ""
+	// Query NFT token info if it's new.
+	if tokenID != "" && !db.NftTokenExists(assetID, tokenID) {
+		nftJSONInfo, _ = queryNFTTokenInfo(tx, scriptHash, tokenID)
+	}
+
 	nftStoreChan <- &nftStore{
 		t: 1,
 		d: nftTxStore{
@@ -592,8 +602,31 @@ func recordNftTransfer(nftStoreChan chan<- *nftStore, tx *tx.Transaction, assetI
 			transferValue: transferValue,
 			tokenID:       tokenID,
 			totalSupply:   totalSupply,
+			nftJSONInfo:   nftJSONInfo,
 		},
 	}
+}
+
+func queryNFTTokenInfo(tx *tx.Transaction, scriptHash []byte, tokenID string) (string, bool) {
+	scripts := smartcontract.CreateNftPropertiesScript(scriptHash, tokenID)
+
+	minHeight := getMinHeight(tx.BlockIndex)
+	result := rpc.SmartContractRPCCall(minHeight, scripts)
+	if result == nil || strings.Contains(result.State, "FAULT") {
+		return "", false
+	}
+	if len(result.Stack) < 1 {
+		return "", false
+	}
+
+	propertiesBytesStr, ok := result.Stack[0].Value.(string)
+	if !ok {
+		return "", false
+	}
+
+	propertiesBytes, _ := hex.DecodeString(propertiesBytesStr)
+	propertiesJSON := string(propertiesBytes)
+	return propertiesJSON, true
 }
 
 func getNftTransferValue(assetID string, val string, valType string) (*big.Float, bool) {

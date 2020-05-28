@@ -88,6 +88,20 @@ func GetNftAssetDecimals() map[string]uint8 {
 	return nftDecimals
 }
 
+// NftTokenExists tells if the given tokenID exists.
+func NftTokenExists(assetID, tokenID string) bool {
+	exists := false
+
+	query := "SELECT EXISTS (SELECT `id` FROM `nft_token` WHERE `asset_id` = ? AND `token_id` = ? LIMIT 1)"
+	err := db.QueryRow(query, assetID, tokenID).Scan(&exists)
+	if err != nil {
+		log.Error.Println(err)
+		panic(err)
+	}
+
+	return exists
+}
+
 //GetNftTxScripts returns script string of transaction.
 func GetNftTxScripts(txID string) ([]*tx.TransactionScripts, error) {
 	var txScripts []*tx.TransactionScripts
@@ -224,7 +238,7 @@ func UpdateNftTotalSupply(tx *sql.Tx, assetID string, totalSupply *big.Float) er
 }
 
 // InsertNfttransaction inserts new nft transaction into db.
-func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, fromAddr string, fromBalance *big.Float, toAddr string, toBalance *big.Float, transferValue *big.Float, tokenID string, totalSupply *big.Float) error {
+func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, fromAddr string, fromBalance *big.Float, toAddr string, toBalance *big.Float, transferValue *big.Float, tokenID string, totalSupply *big.Float, nftJsonInfo string) error {
 	return transact(func(tx *sql.Tx) error {
 		addrsOffset := 0
 		holdingAddrsOffset := 0
@@ -314,9 +328,39 @@ func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 				return err
 			}
 		}
+
+		// Persist nft token info.
+		if nftJsonInfo != "" {
+			if err := persistNftToken(tx, assetID, tokenID, nftJsonInfo); err != nil {
+				return err
+			}
+		}
+
+		updateNftTokenOwner(tx, assetID, tokenID, fromAddr, toAddr)
+
 		err := updateNftCounter(tx, trans.ID, appLogIdx)
 		return err
 	})
+}
+
+func persistNftToken(tx *sql.Tx, assetID, tokenID, nftJSONInfo string) error {
+	query := "INSERT INTO `nft_token`(`asset_id`, `token_id`, `info`) VALUES(?, ?, ?)"
+	_, err := tx.Exec(query, assetID, tokenID, nftJSONInfo)
+	if err != nil {
+		log.Error.Println(err)
+	}
+
+	return err
+}
+
+func updateNftTokenOwner(tx *sql.Tx, assetID, tokenID, from, to string) error {
+	query := "UPDATE `addr_asset_nft` SET `address`=? WHERE `address`=? AND `asset_id`=? AND `token_id`=? LIMIT 1"
+	_, err := tx.Exec(query, to, from, assetID, tokenID)
+	if err != nil {
+		log.Error.Println(err)
+	}
+
+	return err
 }
 
 // GetMaxNonEmptyScriptTxPkForNft returns largest pk of invocation transaction.

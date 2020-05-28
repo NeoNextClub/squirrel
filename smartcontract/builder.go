@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"squirrel/log"
+	"strconv"
 )
 
 type scriptBuilder struct {
@@ -43,7 +45,13 @@ func (sb *scriptBuilder) EmitPushBytes(data []byte) {
 		panic("Can not emit push empty byte slice.")
 	}
 
-	if length <= 0x4B {
+	if length == 1 {
+		if data[0] == 0x00 ||
+			data[0] == 0x4F ||
+			(data[0] >= 0x51 && data[0] <= 0x60) {
+			sb.b.WriteByte(data[0])
+		}
+	} else if length <= 0x4B {
 		sb.b.WriteByte(byte(length))
 		sb.b.Write(data)
 	} else if length <= 0xFF { // One byte
@@ -88,4 +96,23 @@ func (scsb *ScriptBuilder) GetScript() string {
 	scsb.sb.EmitAppCall(scsb.ScriptHash)
 
 	return hex.EncodeToString(scsb.sb.b.Bytes())
+}
+
+// CreateNftPropertiesScript creates scripts for NFT properties RPC call.
+func CreateNftPropertiesScript(scriptHash []byte, tokenID string) string {
+	sb := scriptBuilder{}
+	tokenIDInteger, err := strconv.ParseInt(tokenID, 10, 64)
+	if err != nil {
+		log.Error.Println(err)
+		return ""
+	}
+	sb.EmitPush(tokenIDInteger)
+
+	scsb := ScriptBuilder{
+		ScriptHash: scriptHash,
+		Method:     "properties",
+		Params:     [][]byte{sb.b.Bytes()},
+	}
+
+	return scsb.GetScript()
 }
