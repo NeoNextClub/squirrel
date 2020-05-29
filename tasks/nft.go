@@ -16,7 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"squirrel/addr"
 	"squirrel/db"
 	"squirrel/rpc"
 	"squirrel/tx"
@@ -54,11 +53,10 @@ type nftStore struct {
 }
 
 type nftAssetStore struct {
-	tx        *tx.Transaction
-	nft       *nft.Nft
-	regInfo   *nft.NftRegInfo
-	addrAsset *addr.Asset
-	atHeight  uint
+	tx       *tx.Transaction
+	nft      *nft.Nft
+	regInfo  *nft.NftRegInfo
+	atHeight uint
 }
 
 type nftTxStore struct {
@@ -79,8 +77,6 @@ type nftBalanceTSStore struct {
 	txPK        uint
 	blockTime   uint64
 	blockIndex  uint
-	addr        string
-	balance     *big.Float
 	assetID     string
 	totalSupply *big.Float
 }
@@ -316,7 +312,6 @@ func handleNftAssetStore(s *nftStore) uint {
 	err := db.InsertNftAsset(d.tx,
 		d.nft,
 		d.regInfo,
-		d.addrAsset,
 		d.atHeight)
 	if err != nil {
 		panic(err)
@@ -332,7 +327,7 @@ func handleNftTxStore(s *nftStore) uint {
 		panic(err)
 	}
 
-	err := db.InsertNfttransaction(
+	err := db.InsertNftTransaction(
 		d.tx,
 		d.applogIdx,
 		d.assetID,
@@ -362,8 +357,6 @@ func handleNftBalanceTotalSupplyStore(s *nftStore) uint {
 	err := db.UpdateNftTotalSupplyAndAddrAsset(
 		d.blockTime,
 		d.blockIndex,
-		d.addr,
-		d.balance,
 		d.assetID,
 		d.totalSupply)
 	if err != nil {
@@ -405,7 +398,7 @@ func handleNftRegTx(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCodeDat
 	}
 
 	// Get nft definitions to make sure it is nft.
-	nft, addrAsset, atHeight, ok := queryNftAssetInfo(tx, regInfo.ScriptHash, adminAddr)
+	nft, atHeight, ok := queryNftAssetInfo(tx, regInfo.ScriptHash, adminAddr)
 	if !ok {
 		return "", "", false
 	}
@@ -416,11 +409,10 @@ func handleNftRegTx(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCodeDat
 	nftStoreChan <- &nftStore{
 		t: 0,
 		d: nftAssetStore{
-			tx:        tx,
-			nft:       nft,
-			regInfo:   regInfo,
-			addrAsset: addrAsset,
-			atHeight:  atHeight,
+			tx:       tx,
+			nft:      nft,
+			regInfo:  regInfo,
+			atHeight: atHeight,
 		},
 	}
 
@@ -463,23 +455,11 @@ func handleNftNonTxCall(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCod
 			continue
 		}
 
-		// Query totalSupply and caller's balance.
-		callerAddr, ok := getCallerAddr(tx)
-		if !ok {
-			continue
-		}
-
 		totalSupply, ok := queryNftTotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
 		if !ok {
 			continue
 		}
 
-		callerBalance, ok := queryNftCallerBalance(tx.BlockIndex, tx.BlockTime, scriptHash, callerAddr)
-		if !ok || callerBalance.Cmp(big.NewFloat(0)) != 1 {
-			continue
-		}
-
-		callerAddrStr := util.GetAddressFromScriptHash(callerAddr)
 		assetID := util.GetAssetIDFromScriptHash(scriptHash)
 
 		nftStoreChan <- &nftStore{
@@ -488,8 +468,6 @@ func handleNftNonTxCall(nftStoreChan chan<- *nftStore, tx *tx.Transaction, opCod
 				txPK:        tx.ID,
 				blockTime:   tx.BlockTime,
 				blockIndex:  tx.BlockIndex,
-				addr:        callerAddrStr,
-				balance:     callerBalance,
 				assetID:     assetID,
 				totalSupply: totalSupply,
 			},
@@ -691,7 +669,7 @@ func isNftRegistrationTx(script string) bool {
 // 	return strings.Contains(script, keyword)
 // }
 
-func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) (*nft.Nft, *addr.Asset, uint, bool) {
+func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) (*nft.Nft, uint, bool) {
 	assetID := util.GetAssetIDFromScriptHash(scriptHash)
 	adminAddr := util.GetAddressFromScriptHash(addrBytes)
 
@@ -699,64 +677,53 @@ func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) 
 	scripts += createSCSB(scriptHash, "symbol", nil)
 	scripts += createSCSB(scriptHash, "decimals", nil)
 	scripts += createSCSB(scriptHash, "totalSupply", nil)
-	scripts += createSCSB(scriptHash, "balanceOf", [][]byte{addrBytes})
 
 	minHeight := getMinHeight(tx.BlockIndex)
 	result := rpc.SmartContractRPCCall(minHeight, scripts)
 	if result == nil || strings.Contains(result.State, "FAULT") {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
-	if len(result.Stack) < 5 {
-		return nil, nil, 0, false
+	if len(result.Stack) < 4 {
+		return nil, 0, false
 	}
 
 	nameBytesStr, ok := result.Stack[0].Value.(string)
 	if !ok {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 	nameBytes, err := hex.DecodeString(nameBytesStr)
 	if err != nil {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 	name := strings.Replace(string(nameBytes), "'", "\\'", -1)
 	if name == "" {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 
 	symbolBytesStr, ok := result.Stack[1].Value.(string)
 	if !ok {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 	symbolBytes, _ := hex.DecodeString(symbolBytesStr)
 	symbol := string(symbolBytes)
 	if symbol == "" {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 
 	decimalsHexStr, ok := result.Stack[2].Value.(string)
 	if !ok {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 	decimals := util.HexToBigInt(decimalsHexStr).Int64()
 	if decimals < 0 || decimals > 8 {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 
 	totalSupply, ok := extractValue(result.Stack[3].Value, result.Stack[3].Type)
 	if !ok {
-		return nil, nil, 0, false
+		return nil, 0, false
 	}
 	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
-
-	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[4].Type)
-	if !ok {
-		return nil, nil, 0, false
-	}
-	if adminBalance.Cmp(big.NewFloat(0)) == 1 {
-		adminBalance = new(big.Float).Quo(adminBalance, big.NewFloat(math.Pow10(int(decimals))))
-	}
-
-	addrHasBalance := adminBalance.Cmp(big.NewFloat(0))
 
 	nft := &nft.Nft{
 		AssetID:          assetID,
@@ -768,28 +735,12 @@ func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) 
 		TxID:             tx.TxID,
 		BlockIndex:       tx.BlockIndex,
 		BlockTime:        tx.BlockTime,
-		Addresses:        uint64(addrHasBalance),
-		HoldingAddresses: uint64(addrHasBalance),
+		Addresses:        0,
+		HoldingAddresses: 0,
 		Transfers:        0,
 	}
 
-	var addrAsset *addr.Asset
-
-	// Maybe admin does not have any balance.
-	// Admin may have responsibility only for calling functions,
-	// itself is not the one who to 'deploy',
-	// but 'issue' asset directly to others.
-	if addrHasBalance == 1 {
-		addrAsset = &addr.Asset{
-			Address:             adminAddr,
-			AssetID:             assetID,
-			Balance:             adminBalance,
-			Transactions:        0,
-			LastTransactionTime: 0,
-		}
-	}
-
-	return nft, addrAsset, uint(minHeight), true
+	return nft, uint(minHeight), true
 }
 
 func createNftBalanceSCSB(scriptHash []byte, addrBytes []byte) string {

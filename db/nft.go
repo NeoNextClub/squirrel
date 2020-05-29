@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"sort"
-	"squirrel/addr"
 	"squirrel/asset"
 	"squirrel/cache"
 	"squirrel/log"
@@ -127,7 +126,7 @@ func GetNftTxScripts(txID string) ([]*tx.TransactionScripts, error) {
 }
 
 // InsertNftAsset inserts new nft asset into db.
-func InsertNftAsset(trans *tx.Transaction, nft *nft.Nft, regInfo *nft.NftRegInfo, addrAsset *addr.Asset, atHeight uint) error {
+func InsertNftAsset(trans *tx.Transaction, nft *nft.Nft, regInfo *nft.NftRegInfo, atHeight uint) error {
 	return transact(func(tx *sql.Tx) error {
 		insertNftSQL := fmt.Sprintf("INSERT INTO `nft` (`asset_id`, `admin_address`, `name`, `symbol`, `decimals`, `total_supply`, `txid`, `block_index`, `block_time`, `addresses`, `holding_addresses`, `transfers`) VALUES('%s', '%s', '%s', '%s', %d, %.8f, '%s', %d, %d, %d, %d, %d)", nft.AssetID, nft.AdminAddress, nft.Name, nft.Symbol, nft.Decimals, nft.TotalSupply, nft.TxID, nft.BlockIndex, nft.BlockTime, nft.Addresses, nft.HoldingAddresses, nft.Transfers)
 		res, err := tx.Exec(insertNftSQL)
@@ -144,87 +143,14 @@ func InsertNftAsset(trans *tx.Transaction, nft *nft.Nft, regInfo *nft.NftRegInfo
 			return err
 		}
 
-		addrCreated := false
-		if addrAsset != nil {
-			addrCreated, err = createAddrInfoIfNotExist(tx, trans.BlockTime, addrAsset.Address)
-			if err != nil {
-				log.Error.Printf("TxID: %s, nftInfo: %+v, regInfo=%+v, addrAsset=%+v, atHeight=%d\n", trans.TxID, nft, regInfo, addrAsset, atHeight)
-				return err
-			}
-
-			if _, ok := cache.GetAddrAsset(addrAsset.Address, addrAsset.AssetID); !ok {
-				cache.CreateAddrAsset(addrAsset.Address, addrAsset.AssetID, addrAsset.Balance, atHeight)
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addrAsset.Address, addrAsset.AssetID, addrAsset.Balance, addrAsset.Transactions, addrAsset.LastTransactionTime)
-				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
-					return err
-				}
-			}
-		}
-
-		if addrCreated {
-			if err := incrAddrCounter(tx, 1); err != nil {
-				return err
-			}
-		}
 		return updateNftCounter(tx, trans.ID, -1)
 	})
 }
 
-// UpdateNftTotalSupplyAndAddrAsset updates nft total supply and admin balance.
-func UpdateNftTotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr string, balance *big.Float, assetID string, totalSupply *big.Float) error {
+// UpdateNftTotalSupplyAndAddrAsset updates nft total supply.
+func UpdateNftTotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, assetID string, totalSupply *big.Float) error {
 	return transact(func(tx *sql.Tx) error {
-		addrCreated := false
-		var err error
-
-		if balance.Cmp(big.NewFloat(0)) == 1 {
-			if addrCreated, err = createAddrInfoIfNotExist(tx, blockTime, addr); err != nil {
-				log.Error.Printf("blockTime=%d, blockIndex=%d, addr=%s, balance=%v, assetID=%s, totalSupply=%v\n",
-					blockTime, blockIndex, addr, balance, assetID, totalSupply)
-				return err
-			}
-
-			cachedAddr, _ := cache.GetAddrOrCreate(addr, blockTime)
-			addrAssetCache, created := cachedAddr.GetAddrAssetOrCreate(assetID, balance)
-
-			if created {
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addr, assetID, balance, 0, blockTime)
-				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
-					return err
-				}
-				const incrNftAddrQuery = "UPDATE `nft` SET `addresses` = `addresses` + 1, `holding_addresses` = `holding_addresses` + 1 WHERE `asset_id` = ? LIMIT 1"
-				if _, err := tx.Exec(incrNftAddrQuery, assetID); err != nil {
-					return err
-				}
-			} else {
-				if addrAssetCache.UpdateBalance(balance, blockIndex) {
-					query := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.8f WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, addr, assetID)
-					if _, err := tx.Exec(query); err != nil {
-						return err
-					}
-				}
-			}
-		} else {
-			// balance is zero.
-			if addrAssetCache, ok := cache.GetAddrAsset(addr, assetID); ok {
-				if addrAssetCache.UpdateBalance(balance, blockIndex) {
-					const updateBalanceQuery = "UPDATE `nft` SET `holding_addresses` = `holding_addresses` - 1 WHERE `asset_id` = ? LIMIT 1"
-					if _, err := tx.Exec(updateBalanceQuery, assetID); err != nil {
-						return err
-					}
-				}
-			}
-		}
-
-		// Update nft total supply.
-		if err := UpdateNftTotalSupply(tx, assetID, totalSupply); err != nil {
-			return err
-		}
-
-		if addrCreated {
-			return incrAddrCounter(tx, 1)
-		}
-
-		return nil
+		return UpdateNftTotalSupply(tx, assetID, totalSupply)
 	})
 }
 
@@ -237,8 +163,8 @@ func UpdateNftTotalSupply(tx *sql.Tx, assetID string, totalSupply *big.Float) er
 	return err
 }
 
-// InsertNfttransaction inserts new nft transaction into db.
-func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, fromAddr string, fromBalance *big.Float, toAddr string, toBalance *big.Float, transferValue *big.Float, tokenID string, totalSupply *big.Float, nftJsonInfo string) error {
+// InsertNftTransaction inserts new nft transaction into db.
+func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, fromAddr string, fromBalance *big.Float, toAddr string, toBalance *big.Float, transferValue *big.Float, tokenID string, totalSupply *big.Float, nftJSONInfo string) error {
 	return transact(func(tx *sql.Tx) error {
 		addrsOffset := 0
 		holdingAddrsOffset := 0
@@ -293,16 +219,21 @@ func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 				addrsOffset++
 			}
 
-			// Insert addr_asset record if not exist or update record.
+			// Insert addr_asset_nft record if not exist or update record.
 			if created {
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addr, assetID, balance, 1, trans.BlockTime)
+				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset_nft` (`address`, `asset_id`, `token_id`, `balance`) VALUES ('%s', '%s', '%s', %.18f)", addr, assetID, tokenID, transferValue)
 				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
 					return err
 				}
 			} else {
 				addrAssetCache.UpdateBalance(balance, trans.BlockIndex)
-				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.8f, `transactions` = `transactions` + 1, `last_transaction_time` = %d WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, trans.BlockTime, addr, assetID)
-				if _, err := tx.Exec(updateAddrAssetQuery); err != nil {
+				op := "+"
+				if addr == fromAddr {
+					op = "-"
+				}
+
+				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset_nft` SET `balance` = `balance` %s %.8f WHERE `address` = ? AND `asset_id` = ? AND `token_id`= ? LIMIT 1", op, balance)
+				if _, err := tx.Exec(updateAddrAssetQuery, addr, assetID, tokenID); err != nil {
 					return err
 				}
 			}
@@ -330,13 +261,11 @@ func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 		}
 
 		// Persist nft token info.
-		if nftJsonInfo != "" {
-			if err := persistNftToken(tx, assetID, tokenID, nftJsonInfo); err != nil {
+		if nftJSONInfo != "" {
+			if err := persistNftToken(tx, assetID, tokenID, nftJSONInfo); err != nil {
 				return err
 			}
 		}
-
-		updateNftTokenOwner(tx, assetID, tokenID, fromAddr, toAddr)
 
 		err := updateNftCounter(tx, trans.ID, appLogIdx)
 		return err
@@ -346,16 +275,6 @@ func InsertNfttransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 func persistNftToken(tx *sql.Tx, assetID, tokenID, nftJSONInfo string) error {
 	query := "INSERT INTO `nft_token`(`asset_id`, `token_id`, `info`) VALUES(?, ?, ?)"
 	_, err := tx.Exec(query, assetID, tokenID, nftJSONInfo)
-	if err != nil {
-		log.Error.Println(err)
-	}
-
-	return err
-}
-
-func updateNftTokenOwner(tx *sql.Tx, assetID, tokenID, from, to string) error {
-	query := "UPDATE `addr_asset_nft` SET `address`=? WHERE `address`=? AND `asset_id`=? AND `token_id`=? LIMIT 1"
-	_, err := tx.Exec(query, to, from, assetID, tokenID)
 	if err != nil {
 		log.Error.Println(err)
 	}

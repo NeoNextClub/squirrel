@@ -318,7 +318,7 @@ create table addr_asset_nft
     address      varchar(128)             not null,
     asset_id     char(66)                 not null,
     token_id     char(66)                 not null,
-    created_at   bigint unsigned          not null
+    balance      decimal(35, 8)           not null,
 ) engine = InnoDB default charset = 'utf8mb4';
 
 

@@ -42,6 +42,38 @@ func GetAddrAssetInfo() []*addr.AssetInfo {
 		result = append(result, m)
 	}
 
+	// Append addr-nft asset info.
+	result = append(result, getAddrAssetNFTInfo()...)
+
+	return result
+}
+
+func getAddrAssetNFTInfo() []*addr.AssetInfo {
+	const query = "SELECT `address`, `asset_id`, SUM(`balance`) AS `balance` FROM `addr_asset_nft` GROUP BY `address`, `asset_id`"
+	rows, err := wrappedQuery(query)
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	result := []*addr.AssetInfo{}
+	for rows.Next() {
+		m := &addr.AssetInfo{}
+		var balanceStr string
+
+		err := rows.Scan(
+			&m.Address,
+			&m.AssetID,
+			&balanceStr,
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		m.Balance = util.StrToBigFloat(balanceStr)
+		result = append(result, m)
+	}
+
 	return result
 }
 
