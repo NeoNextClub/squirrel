@@ -12,7 +12,7 @@ TRUNCATE TABLE `nep5`;
 TRUNCATE TABLE `nep5_reg_info`;
 TRUNCATE TABLE `nep5_tx`;
 TRUNCATE TABLE `nep5_migrate`;
-DELETE FROM `address` WHERE `trans_asset`=0 AND `trans_nep5`=0;
+DELETE FROM `address` WHERE `trans_asset`=0 AND `trans_nep5`=0 AND `trans_nft`=0;
 UPDATE `counter` SET `nep5_tx_pk_for_addr_tx`=0 WHERE `id`=1;
 
 To check if rpc node has enabled smart contract log,
