@@ -711,6 +711,15 @@ func isNep5RegistrationTx(script string) bool {
 		strings.Contains(script, "73796d626f6c") &&
 		// decimals
 		strings.Contains(script, "646563696d616c73") {
+		// Exclude nft keywords.
+		// ownerOf
+		if strings.Contains(script, "6f776e65724f66") &&
+			// tokensOf
+			strings.Contains(script, "746f6b656e734f66") &&
+			// properties
+			strings.Contains(script, "70726f70657274696573") {
+			return false
+		}
 		return true
 	}
 
