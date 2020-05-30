@@ -232,7 +232,7 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 					op = "-"
 				}
 
-				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset_nft` SET `balance` = `balance` %s %.8f WHERE `address` = ? AND `asset_id` = ? AND `token_id`= ? LIMIT 1", op, balance)
+				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset_nft` SET `balance` = `balance` %s %.8f WHERE `address` = ? AND `asset_id` = ? AND `token_id`= ? LIMIT 1", op, transferValue)
 				if _, err := tx.Exec(updateAddrAssetQuery, addr, assetID, tokenID); err != nil {
 					return err
 				}
