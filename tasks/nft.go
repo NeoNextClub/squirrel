@@ -6,14 +6,13 @@ DELETE FROM `addr_tx` WHERE `asset_type` = 'nft';
 UPDATE `address` SET `trans_nft` = 0 WHERE 1=1;
 UPDATE `counter` SET
 	`last_tx_pk_for_nft` = 0,
-	`nft_app_log_idx` = -1
+	`nft_app_log_idx` = -1,
+	`nft_tx_pk_for_addr_tx`=0
 WHERE `id` = 1;
 TRUNCATE TABLE `nft`;
 TRUNCATE TABLE `nft_reg_info`;
 TRUNCATE TABLE `nft_tx`;
 TRUNCATE TABLE `nft_token`;
-DELETE FROM `address` WHERE `trans_asset`=0 AND `trans_nep5`=0 AND `trans_nft`=0;
-UPDATE `counter` SET `nft_tx_pk_for_addr_tx`=0 WHERE `id`=1;
 
 */
 
