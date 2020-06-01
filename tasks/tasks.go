@@ -25,7 +25,7 @@ func Run() {
 	go arrangeBlock(dbHeight, blockChannel)
 	go storeBlock(blockChannel)
 
-	// go startNep5Task()
+	go startNep5Task()
 	go startNftTask()
 	go startTxTask()
 	go startUpdateCounterTask()

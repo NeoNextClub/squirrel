@@ -61,7 +61,7 @@ func initCounterInstance() Counter {
 		CntTxPublish:       0,
 		CntTxEnrollment:    0,
 	}
-	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`,`last_tx_pk_for_nft`, `nft_app_log_idx`,`last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `nft_tx_pk_for_addr_tx`,`last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	const query = "INSERT INTO `counter` (`id`, `last_block_index`, `last_tx_pk`, `last_asset_tx_pk`, `last_tx_pk_for_nep5`, `app_log_idx`, `last_tx_pk_for_nft`, `nft_app_log_idx`, `last_tx_pk_for_sc`, `nep5_tx_pk_for_addr_tx`, `nft_tx_pk_for_addr_tx`, `last_tx_pk_gas_balance`, `cnt_addr`, `cnt_tx_reg`, `cnt_tx_miner`, `cnt_tx_issue`, `cnt_tx_invocation`, `cnt_tx_contract`, `cnt_tx_claim`, `cnt_tx_publish`, `cnt_tx_enrollment`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	_, err := db.Exec(query,
 		c.ID,
@@ -69,6 +69,7 @@ func initCounterInstance() Counter {
 		c.LastTxPk,
 		c.LastAssetTxPk,
 		c.LastTxPkForNep5,
+		c.AppLogIdx,
 		c.LastTxPkForNft,
 		c.NftAppLogIdx,
 		c.LastTxPkForSC,
