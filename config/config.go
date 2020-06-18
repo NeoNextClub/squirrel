@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"net/url"
 	"squirrel/log"
 	"strings"
@@ -178,11 +177,6 @@ func checkRPCs() error {
 				return err
 			}
 			rpc = u.Host
-		}
-
-		_, _, err := net.SplitHostPort(rpc)
-		if err != nil {
-			return err
 		}
 	}
 
