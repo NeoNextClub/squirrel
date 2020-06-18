@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"math/big"
 	"squirrel/log"
+	"squirrel/util"
 	"strconv"
 )
 
@@ -33,9 +35,9 @@ func (sb *scriptBuilder) EmitPush(number int64) {
 	} else if number > 0 && number <= 16 {
 		sb.Emit(0x51 - 1 + byte(int8(number)))
 	} else {
-		numberBytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(numberBytes, uint64(number))
-		sb.EmitPushBytes(numberBytes)
+		bInt := big.NewInt(number)
+		val := util.ReverseBytes(bInt.Bytes())
+		sb.EmitPushBytes(val)
 	}
 }
 
@@ -49,6 +51,9 @@ func (sb *scriptBuilder) EmitPushBytes(data []byte) {
 		if data[0] == 0x00 ||
 			data[0] == 0x4F ||
 			(data[0] >= 0x51 && data[0] <= 0x60) {
+			sb.b.WriteByte(data[0])
+		} else {
+			sb.b.WriteByte(0x01)
 			sb.b.WriteByte(data[0])
 		}
 	} else if length <= 0x4B {
@@ -100,18 +105,19 @@ func (scsb *ScriptBuilder) GetScript() string {
 
 // CreateNftPropertiesScript creates scripts for NFT properties RPC call.
 func CreateNftPropertiesScript(scriptHash []byte, tokenID string) string {
-	sb := scriptBuilder{}
 	tokenIDInteger, err := strconv.ParseInt(tokenID, 10, 64)
 	if err != nil {
 		log.Error.Println(err)
 		return ""
 	}
-	sb.EmitPush(tokenIDInteger)
+
+	bInt := big.NewInt(tokenIDInteger)
+	tokenIDBytes := util.ReverseBytes(bInt.Bytes())
 
 	scsb := ScriptBuilder{
 		ScriptHash: scriptHash,
 		Method:     "properties",
-		Params:     [][]byte{sb.b.Bytes()},
+		Params:     [][]byte{tokenIDBytes},
 	}
 
 	return scsb.GetScript()
