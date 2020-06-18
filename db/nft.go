@@ -219,8 +219,15 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 				addrsOffset++
 			}
 
+			var recordExists bool
+			query := "SELECT EXISTS(SELECT `id` FROM `addr_asset_nft` WHERE `address`=? AND `asset_id`=? AND `token_id`=?)"
+			err = tx.QueryRow(query, addr, assetID, tokenID).Scan(&recordExists)
+			if err != nil {
+				return err
+			}
+
 			// Insert addr_asset_nft record if not exist or update record.
-			if created {
+			if !recordExists {
 				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset_nft` (`address`, `asset_id`, `token_id`, `balance`) VALUES ('%s', '%s', '%s', %.18f)", addr, assetID, tokenID, transferValue)
 				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
 					return err
