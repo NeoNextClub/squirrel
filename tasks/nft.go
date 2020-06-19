@@ -639,7 +639,7 @@ func getNftTokenID(str, valType string) (string, bool) {
 	case "Integer":
 		return str, true
 	case "ByteArray":
-		byteToInteger, err := strconv.ParseInt(string([]byte(str)), 10, 64)
+		byteToInteger, err := strconv.ParseInt(str, 16, 64)
 		if err == nil {
 			return strconv.FormatInt(byteToInteger, 10), true
 		}
