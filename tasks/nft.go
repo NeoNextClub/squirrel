@@ -29,7 +29,6 @@ import (
 	"squirrel/mail"
 	"squirrel/nft"
 	"squirrel/smartcontract"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -639,18 +638,14 @@ func getNftTokenID(str, valType string) (string, bool) {
 	case "Integer":
 		return str, true
 	case "ByteArray":
-		byteToInteger, err := strconv.ParseInt(str, 16, 64)
-		if err == nil {
-			return strconv.FormatInt(byteToInteger, 10), true
-		}
-
 		bytes, err := hex.DecodeString(str)
 		if err != nil {
 			log.Error.Printf("getNftTokenID(%s, %s) failed: %v", str, valType, err)
 			return "", false
 		}
 
-		return string(bytes), true
+		bint := new(big.Int).SetBytes(util.ReverseBytes(bytes))
+		return bint.String(), true
 	default:
 		return "", false
 	}
