@@ -606,22 +606,37 @@ func queryNFTTokenInfo(tx *tx.Transaction, scriptHash []byte, tokenID string) (s
 	scripts := smartcontract.CreateNftPropertiesScript(scriptHash, tokenID)
 
 	minHeight := getMinHeight(tx.BlockIndex)
-	result := rpc.SmartContractRPCCall(minHeight, scripts)
-	if result == nil || strings.Contains(result.State, "FAULT") {
-		return "", false
-	}
-	if len(result.Stack) < 1 {
-		return "", false
+
+	// When there are more than one backend fullnodes,
+	// sometimes if node A received a new block which contains
+	// NFT transfers, but at the same time B just synced to the same height
+	// and haven't handle the same NFT transfers, in this case(little possibility),
+	// the 'properties' query would fail, so try for three times to make sure if
+	// in this case, or the tokenID is just invalid.
+
+	for i := 0; i < 3; i++ {
+		result := rpc.SmartContractRPCCall(minHeight, scripts)
+		if result == nil || strings.Contains(result.State, "FAULT") {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		if len(result.Stack) < 1 {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		propertiesBytesStr, ok := result.Stack[0].Value.(string)
+		if !ok {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		propertiesBytes, _ := hex.DecodeString(propertiesBytesStr)
+		propertiesJSON := string(propertiesBytes)
+		return propertiesJSON, true
 	}
 
-	propertiesBytesStr, ok := result.Stack[0].Value.(string)
-	if !ok {
-		return "", false
-	}
-
-	propertiesBytes, _ := hex.DecodeString(propertiesBytesStr)
-	propertiesJSON := string(propertiesBytes)
-	return propertiesJSON, true
+	return "", false
 }
 
 func getNftTransferValue(assetID string, val string, valType string) (*big.Float, bool) {
