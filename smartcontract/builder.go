@@ -48,16 +48,7 @@ func (sb *scriptBuilder) EmitPushBytes(data []byte) {
 		panic("Can not emit push empty byte slice.")
 	}
 
-	if length == 1 {
-		if data[0] == 0x00 ||
-			data[0] == 0x4F ||
-			(data[0] >= 0x51 && data[0] <= 0x60) {
-			sb.b.WriteByte(data[0])
-		} else {
-			sb.b.WriteByte(0x01)
-			sb.b.WriteByte(data[0])
-		}
-	} else if length <= 0x4B {
+	if length <= 0x4B {
 		sb.b.WriteByte(byte(length))
 		sb.b.Write(data)
 	} else if length <= 0xFF { // One byte
