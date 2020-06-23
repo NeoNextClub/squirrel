@@ -267,8 +267,10 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 			}
 		}
 
-		if err := persistNftToken(tx, assetID, tokenID, nftJSONInfo); err != nil {
-			return err
+		if nftJSONInfo != "" {
+			if err := persistNftToken(tx, assetID, tokenID, nftJSONInfo); err != nil {
+				return err
+			}
 		}
 
 		err := updateNftCounter(tx, trans.ID, appLogIdx)
