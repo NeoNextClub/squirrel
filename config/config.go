@@ -107,7 +107,7 @@ func GetDbConnStr() string {
 	)
 
 	params := []string{
-		"charset=utf8",
+		"charset=utf8mb4",
 		"parseTime=True",
 		"loc=Local",
 		"maxAllowedPacket=52428800",
