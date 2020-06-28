@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"squirrel/smartcontract"
 	"squirrel/util"
+	"unicode/utf8"
 )
 
 // Nep5 db model.
@@ -32,7 +33,7 @@ type RegInfo struct {
 	Version       string
 	Author        string
 	Email         string
-	Description   []rune
+	Description   string
 	NeedStorage   bool
 	ParameterList string
 	ReturnType    string
@@ -88,7 +89,11 @@ func GetNep5RegInfo(txID string, opCodeDataStack *smartcontract.DataStack) (*Reg
 		Version:       string(opCodeDataStack.PopData()),
 		Author:        string(opCodeDataStack.PopData()),
 		Email:         string(opCodeDataStack.PopData()),
-		Description:   []rune(string(opCodeDataStack.PopData())),
+		Description:   string(opCodeDataStack.PopData()),
+	}
+
+	if !utf8.ValidString(regInfo.Description) {
+		regInfo.Description = ""
 	}
 
 	return &regInfo, true

@@ -20,7 +20,7 @@ func InsertSCInfos(scRegInfos []*nep5.RegInfo, txPK uint) error {
 		for _, regInfo := range scRegInfos {
 			scriptHashHex := util.GetAssetIDFromScriptHash(regInfo.ScriptHash)
 			query += fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ")
-			args = append(args, regInfo.TxID, scriptHashHex, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, string(regInfo.Description), regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType)
+			args = append(args, regInfo.TxID, scriptHashHex, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, regInfo.Description, regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType)
 		}
 
 		_, err := trans.Exec(query[:len(query)-2], args...)
