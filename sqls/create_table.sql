@@ -65,7 +65,7 @@ create table asset
     version      int unsigned     not null,
     asset_id     char(66)         not null,
     type         varchar(32)      not null,
-    name         varchar(128)     not null,
+    name         varchar(256)     not null,
     amount       decimal(35, 8)   not null,
     available    decimal(35, 8)   not null,
     `precision`  tinyint unsigned not null,
@@ -162,7 +162,7 @@ create table smartcontract_info
     version        varchar(255) not null,
     author         varchar(255) not null,
     email          varchar(255) not null,
-    description    varchar(255) not null,
+    description    varchar(512) not null,
     need_storage   tinyint(1)   not null,
     parameter_list varchar(255) not null,
     return_type    varchar(255) not null
