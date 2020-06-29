@@ -156,16 +156,16 @@ create table counter
 create table smartcontract_info
 (
     id             int unsigned auto_increment primary key,
-    txid           char(66)     not null,
-    script_hash    char(40)     not null,
-    name           varchar(255) not null,
-    version        varchar(255) not null,
-    author         varchar(255) not null,
-    email          varchar(255) not null,
-    description    varchar(512) not null,
-    need_storage   tinyint(1)   not null,
-    parameter_list varchar(255) not null,
-    return_type    varchar(255) not null
+    txid           char(66)      not null,
+    script_hash    char(40)      not null,
+    name           varchar(255)  not null,
+    version        varchar(255)  not null,
+    author         varchar(255)  not null,
+    email          varchar(255)  not null,
+    description    varchar(2048) not null,
+    need_storage   tinyint(1)    not null,
+    parameter_list varchar(255)  not null,
+    return_type    varchar(255)  not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
 create index idx_script_hash
