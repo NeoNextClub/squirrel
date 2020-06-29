@@ -92,6 +92,9 @@ func GetNep5RegInfo(txID string, opCodeDataStack *smartcontract.DataStack) (*Reg
 		Description:   string(opCodeDataStack.PopData()),
 	}
 
+	if !utf8.ValidString(regInfo.Name) {
+		regInfo.Name = ""
+	}
 	if !utf8.ValidString(regInfo.Description) {
 		regInfo.Description = ""
 	}
