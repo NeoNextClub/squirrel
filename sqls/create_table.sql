@@ -342,7 +342,7 @@ create table tx
     sys_fee     decimal(27, 8)  not null,
     net_fee     decimal(27, 8)  not null,
     nonce       bigint          not null,
-    script      text            not null,
+    script      mediumtext      not null,
     gas         decimal(27, 8)  not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
