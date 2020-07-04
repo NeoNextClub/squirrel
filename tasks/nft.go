@@ -32,6 +32,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"squirrel/db"
 	"squirrel/rpc"
@@ -633,6 +634,11 @@ func queryNFTTokenInfo(tx *tx.Transaction, scriptHash []byte, tokenID string) (s
 
 		propertiesBytes, _ := hex.DecodeString(propertiesBytesStr)
 		propertiesJSON := string(propertiesBytes)
+
+		if !utf8.ValidString(propertiesJSON) {
+			propertiesJSON = ""
+		}
+
 		return propertiesJSON, true
 	}
 
