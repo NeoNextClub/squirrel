@@ -82,6 +82,8 @@ import (
 
 const nep5ChanSize = 5000
 
+var maxVal *big.Float
+
 var (
 	// Nep5MaxPkShouldRefresh indicates if highest pk should be refreshed
 	Nep5MaxPkShouldRefresh bool
@@ -154,6 +156,8 @@ type nep5MigrateStore struct {
 }
 
 func startNep5Task() {
+	maxVal, _ = new(big.Float).SetString("99999999999999999999999999999999999.99999999")
+
 	nep5AssetDecimals = db.GetNep5AssetDecimals()
 	nep5TxChan := make(chan *nep5TxInfo, nep5ChanSize)
 	applogChan := make(chan *tx.Transaction, nep5ChanSize)
@@ -787,6 +791,9 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 		return nil, nil, 0, false
 	}
 	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
+	if totalSupply.Cmp(maxVal) > 0 {
+		totalSupply = big.NewFloat(0)
+	}
 
 	adminBalance, ok := extractValue(result.Stack[4].Value, result.Stack[4].Type)
 	if !ok {
@@ -794,6 +801,9 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	}
 	if adminBalance.Cmp(big.NewFloat(0)) == 1 {
 		adminBalance = new(big.Float).Quo(adminBalance, big.NewFloat(math.Pow10(int(decimals))))
+	}
+	if adminBalance.Cmp(maxVal) > 0 {
+		adminBalance = big.NewFloat(0)
 	}
 
 	addrHasBalance := adminBalance.Cmp(big.NewFloat(0))
@@ -883,6 +893,9 @@ func queryCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byte, 
 		return big.NewFloat(0), false
 	}
 	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
+	if callerBalance.Cmp(maxVal) > 0 {
+		callerBalance = big.NewFloat(0)
+	}
 
 	return callerBalance, true
 }
@@ -938,6 +951,9 @@ func queryBalances(txBlockIndex uint, scriptHash []byte, assetID string, addrByt
 			continue
 		}
 		balances[i] = getReadableValue(assetID, balance)
+		if balances[i].Cmp(maxVal) > 0 {
+			balances[i] = big.NewFloat(0)
+		}
 		idx++
 	}
 
