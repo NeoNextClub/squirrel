@@ -776,6 +776,9 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	if symbol == "" {
 		return nil, nil, 0, false
 	}
+	if len(symbol) > 16 {
+		symbol = symbol[:16]
+	}
 
 	decimalsHexStr, ok := result.Stack[2].Value.(string)
 	if !ok {
