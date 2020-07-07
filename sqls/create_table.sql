@@ -197,15 +197,15 @@ create index idx_nep5_txid
 create table nep5_reg_info
 (
     id             int unsigned auto_increment primary key,
-    nep5_id        int unsigned not null,
-    name           varchar(255) not null,
-    version        varchar(255) not null,
-    author         varchar(255) not null,
-    email          varchar(255) not null,
-    description    varchar(255) not null,
-    need_storage   tinyint(1)   not null,
-    parameter_list varchar(255) not null,
-    return_type    varchar(255) not null
+    nep5_id        int unsigned  not null,
+    name           varchar(255)  not null,
+    version        varchar(255)  not null,
+    author         varchar(255)  not null,
+    email          varchar(255)  not null,
+    description    varchar(1024) not null,
+    need_storage   tinyint(1)    not null,
+    parameter_list varchar(255)  not null,
+    return_type    varchar(255)  not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
 create index idx_nep5_id
