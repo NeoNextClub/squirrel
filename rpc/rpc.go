@@ -14,7 +14,8 @@ import (
 )
 
 var (
-	client = &http.Client{Timeout: 20 * time.Second}
+	client     = &http.Client{Timeout: 20 * time.Second}
+	fastClient = &fasthttp.Client{}
 )
 
 // JsonRPCResponse returns rpc response data.
@@ -69,8 +70,6 @@ func call(minHeight int, params string, target interface{}) {
 	req.Header.SetMethod("POST")
 	req.SetBody(requestBody)
 
-	client := &fasthttp.Client{}
-
 	for {
 		url, ok := getServer(minHeight)
 		if !ok {
@@ -86,7 +85,7 @@ func call(minHeight int, params string, target interface{}) {
 		}
 
 		req.SetRequestURI(url)
-		err := client.Do(req, resp)
+		err := fastClient.Do(req, resp)
 		if err != nil {
 			log.Error.Println(err)
 			serverUnavailable(url)
