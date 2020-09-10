@@ -75,7 +75,8 @@ create table asset
     expiration   bigint unsigned  not null,
     frozen       tinyint(1)       not null,
     addresses    bigint unsigned  not null,
-    transactions bigint unsigned  not null
+    transactions bigint unsigned  not null,
+    visible      tinyint(1) default 1 not null
 ) engine = InnoDB default charset = 'utf8mb4';
 
 create index idx_asset_asset_id
