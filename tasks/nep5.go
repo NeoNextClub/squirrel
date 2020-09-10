@@ -785,7 +785,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 		return nil, nil, 0, false
 	}
 	decimals := util.HexToBigInt(decimalsHexStr).Int64()
-	if decimals < 0 || decimals > 8 {
+	if decimals < 0 {
 		return nil, nil, 0, false
 	}
 
