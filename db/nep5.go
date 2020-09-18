@@ -115,7 +115,7 @@ func GetTxScripts(txID string) ([]*tx.TransactionScripts, error) {
 // InsertNep5Asset inserts new nep5 asset into db.
 func InsertNep5Asset(trans *tx.Transaction, nep5 *nep5.Nep5, regInfo *nep5.RegInfo, addrAsset *addr.Asset, atHeight uint) error {
 	return transact(func(tx *sql.Tx) error {
-		insertNep5Sql := fmt.Sprintf("INSERT INTO `nep5` (`asset_id`, `admin_address`, `name`, `symbol`, `decimals`, `total_supply`, `txid`, `block_index`, `block_time`, `addresses`, `holding_addresses`, `transfers`) VALUES('%s', '%s', '%s', '%s', %d, %.8f, '%s', %d, %d, %d, %d, %d)", nep5.AssetID, nep5.AdminAddress, nep5.Name, nep5.Symbol, nep5.Decimals, nep5.TotalSupply, nep5.TxID, nep5.BlockIndex, nep5.BlockTime, nep5.Addresses, nep5.HoldingAddresses, nep5.Transfers)
+		insertNep5Sql := fmt.Sprintf("INSERT INTO `nep5` (`asset_id`, `admin_address`, `name`, `symbol`, `decimals`, `total_supply`, `txid`, `block_index`, `block_time`, `addresses`, `holding_addresses`, `transfers`) VALUES('%s', '%s', '%s', '%s', %d, %.64f, '%s', %d, %d, %d, %d, %d)", nep5.AssetID, nep5.AdminAddress, nep5.Name, nep5.Symbol, nep5.Decimals, nep5.TotalSupply, nep5.TxID, nep5.BlockIndex, nep5.BlockTime, nep5.Addresses, nep5.HoldingAddresses, nep5.Transfers)
 		res, err := tx.Exec(insertNep5Sql)
 		if err != nil {
 			return err
@@ -140,7 +140,7 @@ func InsertNep5Asset(trans *tx.Transaction, nep5 *nep5.Nep5, regInfo *nep5.RegIn
 
 			if _, ok := cache.GetAddrAsset(addrAsset.Address, addrAsset.AssetID); !ok {
 				cache.CreateAddrAsset(addrAsset.Address, addrAsset.AssetID, addrAsset.Balance, atHeight)
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addrAsset.Address, addrAsset.AssetID, addrAsset.Balance, addrAsset.Transactions, addrAsset.LastTransactionTime)
+				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.64f, %d, %d)", addrAsset.Address, addrAsset.AssetID, addrAsset.Balance, addrAsset.Transactions, addrAsset.LastTransactionTime)
 				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
 					return err
 				}
@@ -173,7 +173,7 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 			addrAssetCache, created := cachedAddr.GetAddrAssetOrCreate(assetID, balance)
 
 			if created {
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addr, assetID, balance, 0, blockTime)
+				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.64f, %d, %d)", addr, assetID, balance, 0, blockTime)
 				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
 					return err
 				}
@@ -183,7 +183,7 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 				}
 			} else {
 				if addrAssetCache.UpdateBalance(balance, blockIndex) {
-					query := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.8f WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, addr, assetID)
+					query := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.64f WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, addr, assetID)
 					if _, err := tx.Exec(query); err != nil {
 						return err
 					}
@@ -216,7 +216,7 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 
 // UpdateNep5TotalSupply updates total supply of nep5 asset.
 func UpdateNep5TotalSupply(tx *sql.Tx, assetID string, totalSupply *big.Float) error {
-	query := fmt.Sprintf("UPDATE `nep5` SET `total_supply` = %.8f WHERE `asset_id` = '%s' LIMIT 1", totalSupply, assetID)
+	query := fmt.Sprintf("UPDATE `nep5` SET `total_supply` = %.64f WHERE `asset_id` = '%s' LIMIT 1", totalSupply, assetID)
 
 	_, err := tx.Exec(query)
 
@@ -281,13 +281,13 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 
 			// Insert addr_asset record if not exist or update record.
 			if created {
-				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.8f, %d, %d)", addr, assetID, balance, 1, trans.BlockTime)
+				insertAddrAssetQuery := fmt.Sprintf("INSERT INTO `addr_asset` (`address`, `asset_id`, `balance`, `transactions`, `last_transaction_time`) VALUES ('%s', '%s', %.64f, %d, %d)", addr, assetID, balance, 1, trans.BlockTime)
 				if _, err := tx.Exec(insertAddrAssetQuery); err != nil {
 					return err
 				}
 			} else {
 				addrAssetCache.UpdateBalance(balance, trans.BlockIndex)
-				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.8f, `transactions` = `transactions` + 1, `last_transaction_time` = %d WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, trans.BlockTime, addr, assetID)
+				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.64f, `transactions` = `transactions` + 1, `last_transaction_time` = %d WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, trans.BlockTime, addr, assetID)
 				if _, err := tx.Exec(updateAddrAssetQuery); err != nil {
 					return err
 				}
@@ -298,11 +298,11 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 		txSQL := fmt.Sprintf("UPDATE `nep5` SET `addresses` = `addresses` + %d, `holding_addresses` = `holding_addresses` + %d, `transfers` = `transfers` + 1 WHERE `asset_id` = '%s' LIMIT 1;", addrsOffset, holdingAddrsOffset, assetID)
 
 		// Insert nep5 transaction record.
-		txSQL += fmt.Sprintf("INSERT INTO `nep5_tx` (`txid`, `asset_id`, `from`, `to`, `value`, `block_index`, `block_time`) VALUES ('%s', '%s', '%s', '%s', %.8f, %d, %d);", trans.TxID, assetID, fromAddr, toAddr, transferValue, trans.BlockIndex, trans.BlockTime)
+		txSQL += fmt.Sprintf("INSERT INTO `nep5_tx` (`txid`, `asset_id`, `from`, `to`, `value`, `block_index`, `block_time`) VALUES ('%s', '%s', '%s', '%s', %.64f, %d, %d);", trans.TxID, assetID, fromAddr, toAddr, transferValue, trans.BlockIndex, trans.BlockTime)
 
 		// Handle resultant of storage injection attach.
 		if totalSupply != nil {
-			txSQL += fmt.Sprintf("UPDATE `nep5` SET `total_supply` = %.8f WHERE `asset_id` = '%s' LIMIT 1;", totalSupply, assetID)
+			txSQL += fmt.Sprintf("UPDATE `nep5` SET `total_supply` = %.64f WHERE `asset_id` = '%s' LIMIT 1;", totalSupply, assetID)
 		}
 
 		if _, err := tx.Exec(txSQL); err != nil {

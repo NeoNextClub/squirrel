@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const decimalPrecision = 256
+
 // GetValueFromBytes returns integer value of given data bytes.
 func GetValueFromBytes(data []byte) int64 {
 	switch len(data) {
@@ -56,7 +58,7 @@ func padString(str string) string {
 // BytesToBigFloat returns big.Float of given data bytes.
 func BytesToBigFloat(data []byte) *big.Float {
 	data = ReverseBytes(data)
-	val := new(big.Float).SetInt(new(big.Int).SetBytes(data))
+	val := new(big.Float).SetPrec(decimalPrecision).SetInt(new(big.Int).SetBytes(data))
 	if val.Sign() == -1 {
 		return BytesToBigFloat(append(data, 0x00))
 	}
@@ -75,12 +77,25 @@ func ReverseBytes(raw []byte) []byte {
 // StrToBigFloat returns big.Float of the given integer string.
 func StrToBigFloat(str string) *big.Float {
 	if len(str) == 0 {
-		return big.NewFloat(0)
+		return big.NewFloat(0).SetPrec(decimalPrecision)
 	}
 
-	val, _, err := big.ParseFloat(str, 10, 256, big.ToZero)
+	val, _, err := big.ParseFloat(str, 10, decimalPrecision, big.ToZero)
 	if err != nil {
 		panic(err)
 	}
 	return val
+}
+
+// BigFloatToString converts big.Float to string.
+func BigFloatToString(value *big.Float) string {
+	if value == nil {
+		return ""
+	}
+
+	valueStr := value.Text('f', 64)
+	valueStr = strings.TrimRight(valueStr, "0")
+	valueStr = strings.TrimSuffix(valueStr, ".")
+
+	return valueStr
 }

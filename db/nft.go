@@ -128,7 +128,7 @@ func GetNftTxScripts(txID string) ([]*tx.TransactionScripts, error) {
 // InsertNftAsset inserts new nft asset into db.
 func InsertNftAsset(trans *tx.Transaction, nft *nft.Nft, regInfo *nft.NftRegInfo, atHeight uint) error {
 	return transact(func(tx *sql.Tx) error {
-		insertNftSQL := fmt.Sprintf("INSERT INTO `nft` (`asset_id`, `admin_address`, `name`, `symbol`, `decimals`, `total_supply`, `txid`, `block_index`, `block_time`, `addresses`, `holding_addresses`, `transfers`) VALUES('%s', '%s', '%s', '%s', %d, %.8f, '%s', %d, %d, %d, %d, %d)", nft.AssetID, nft.AdminAddress, nft.Name, nft.Symbol, nft.Decimals, nft.TotalSupply, nft.TxID, nft.BlockIndex, nft.BlockTime, nft.Addresses, nft.HoldingAddresses, nft.Transfers)
+		insertNftSQL := fmt.Sprintf("INSERT INTO `nft` (`asset_id`, `admin_address`, `name`, `symbol`, `decimals`, `total_supply`, `txid`, `block_index`, `block_time`, `addresses`, `holding_addresses`, `transfers`) VALUES('%s', '%s', '%s', '%s', %d, %.64f, '%s', %d, %d, %d, %d, %d)", nft.AssetID, nft.AdminAddress, nft.Name, nft.Symbol, nft.Decimals, nft.TotalSupply, nft.TxID, nft.BlockIndex, nft.BlockTime, nft.Addresses, nft.HoldingAddresses, nft.Transfers)
 		res, err := tx.Exec(insertNftSQL)
 		if err != nil {
 			return err
@@ -156,7 +156,7 @@ func UpdateNftTotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, assetID
 
 // UpdateNftTotalSupply updates total supply of nft asset.
 func UpdateNftTotalSupply(tx *sql.Tx, assetID string, totalSupply *big.Float) error {
-	query := fmt.Sprintf("UPDATE `nft` SET `total_supply` = %.8f WHERE `asset_id` = '%s' LIMIT 1", totalSupply, assetID)
+	query := fmt.Sprintf("UPDATE `nft` SET `total_supply` = %.64f WHERE `asset_id` = '%s' LIMIT 1", totalSupply, assetID)
 
 	_, err := tx.Exec(query)
 
@@ -239,7 +239,7 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 					op = "-"
 				}
 
-				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset_nft` SET `balance` = `balance` %s %.8f WHERE `address` = ? AND `asset_id` = ? AND `token_id`= ? LIMIT 1", op, transferValue)
+				updateAddrAssetQuery := fmt.Sprintf("UPDATE `addr_asset_nft` SET `balance` = `balance` %s %.64f WHERE `address` = ? AND `asset_id` = ? AND `token_id`= ? LIMIT 1", op, transferValue)
 				if _, err := tx.Exec(updateAddrAssetQuery, addr, assetID, tokenID); err != nil {
 					return err
 				}
@@ -250,11 +250,11 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 		txSQL := fmt.Sprintf("UPDATE `nft` SET `addresses` = `addresses` + %d, `holding_addresses` = `holding_addresses` + %d, `transfers` = `transfers` + 1 WHERE `asset_id` = '%s' LIMIT 1;", addrsOffset, holdingAddrsOffset, assetID)
 
 		// Insert nft transaction record.
-		txSQL += fmt.Sprintf("INSERT INTO `nft_tx` (`txid`, `asset_id`, `from`, `to`, `token_id`, `value`, `block_index`, `block_time`) VALUES ('%s', '%s', '%s', '%s', '%s', %.8f, %d, %d);", trans.TxID, assetID, fromAddr, toAddr, tokenID, transferValue, trans.BlockIndex, trans.BlockTime)
+		txSQL += fmt.Sprintf("INSERT INTO `nft_tx` (`txid`, `asset_id`, `from`, `to`, `token_id`, `value`, `block_index`, `block_time`) VALUES ('%s', '%s', '%s', '%s', '%s', %.64f, %d, %d);", trans.TxID, assetID, fromAddr, toAddr, tokenID, transferValue, trans.BlockIndex, trans.BlockTime)
 
 		// Handle resultant of storage injection attach.
 		if totalSupply != nil {
-			txSQL += fmt.Sprintf("UPDATE `nft` SET `total_supply` = %.8f WHERE `asset_id` = '%s' LIMIT 1;", totalSupply, assetID)
+			txSQL += fmt.Sprintf("UPDATE `nft` SET `total_supply` = %.64f WHERE `asset_id` = '%s' LIMIT 1;", totalSupply, assetID)
 		}
 
 		if _, err := tx.Exec(txSQL); err != nil {
