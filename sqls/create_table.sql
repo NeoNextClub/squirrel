@@ -11,7 +11,7 @@ create table addr_asset
     id           int unsigned auto_increment primary key,
     address      varchar(128)             not null,
     asset_id     char(66)                 not null,
-    balance      decimal(35, 8)           not null,
+    balance      decimal(64, 22)          not null,
     transactions bigint unsigned          not null,
     last_transaction_time bigint unsigned not null
 ) engine = InnoDB default charset = 'utf8mb4';
@@ -181,7 +181,7 @@ create table nep5
     name              varchar(128)         not null,
     symbol            varchar(16)          not null,
     decimals          tinyint unsigned     not null,
-    total_supply      decimal(35, 8)       not null,
+    total_supply      decimal(64, 22)      not null,
     txid              char(66)             not null,
     block_index       int unsigned         not null,
     block_time        bigint unsigned      not null,
@@ -220,7 +220,7 @@ create table nep5_tx
     asset_id    char(40)        not null,
     `from`      varchar(128)    not null,
     `to`        varchar(128)    not null,
-    value       double          not null,
+    value       decimal(64, 22) not null,
     block_index int unsigned    not null,
     block_time  bigint unsigned not null
 ) engine = InnoDB default charset = 'utf8mb4';
