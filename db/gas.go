@@ -33,7 +33,7 @@ func ApplyGASAssetChange(tx *tx.Transaction, date string, gasChangeMap map[strin
 				lastDate, balance := queryAddrGasDateRecord(addr)
 				if balance == nil || lastDate != date {
 					if balance != nil {
-						dataCache.Balance = new(big.Float).Add(balance, gasChange)
+						dataCache.Balance = new(big.Float).SetPrec(256).Add(balance, gasChange)
 					}
 
 					err := insertGasDateBalanceRecord(trans, addr, date, dataCache.Balance)
@@ -41,7 +41,7 @@ func ApplyGASAssetChange(tx *tx.Transaction, date string, gasChangeMap map[strin
 						return err
 					}
 				} else {
-					dataCache.Balance = new(big.Float).Add(balance, gasChange)
+					dataCache.Balance = new(big.Float).SetPrec(256).Add(balance, gasChange)
 					err := updateGasDateBalanceRecord(trans, addr, date, dataCache.Balance)
 					if err != nil {
 						return err
@@ -52,7 +52,7 @@ func ApplyGASAssetChange(tx *tx.Transaction, date string, gasChangeMap map[strin
 				return err
 			}
 
-			newBalance := new(big.Float).Add(gasDateBalanceCache.Balance, gasChange)
+			newBalance := new(big.Float).SetPrec(256).Add(gasDateBalanceCache.Balance, gasChange)
 			gasDateBalanceCache.Balance = newBalance
 
 			if gasDateBalanceCache.Date == date {

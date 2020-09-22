@@ -320,7 +320,7 @@ func handleClaimTx(tx *sql.Tx, vouts []*tx.TransactionVout) error {
 
 	for _, vout := range vouts {
 		if vout.AssetID == asset.GASAssetID {
-			gas = new(big.Float).Add(gas, vout.Value)
+			gas = new(big.Float).SetPrec(256).Add(gas, vout.Value)
 		}
 	}
 
@@ -340,7 +340,7 @@ func handleIssueTx(tx *sql.Tx, vouts []*tx.TransactionVout) error {
 			if _, ok := issued[vout.AssetID]; !ok {
 				issued[vout.AssetID] = vout.Value
 			} else {
-				issued[vout.AssetID] = new(big.Float).Add(issued[vout.AssetID], vout.Value)
+				issued[vout.AssetID] = new(big.Float).SetPrec(256).Add(issued[vout.AssetID], vout.Value)
 			}
 		}
 	}

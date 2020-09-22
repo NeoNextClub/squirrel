@@ -51,7 +51,7 @@ func GetAssetInfo(script string) *asset.Asset {
 		// Transactions
 	}
 
-	asset.Amount = new(big.Float).Quo(asset.Amount, big.NewFloat(math.Pow10(int(asset.Precision))))
+	asset.Amount = new(big.Float).SetPrec(256).Quo(asset.Amount, big.NewFloat(math.Pow10(int(asset.Precision))))
 
 	return &asset
 }

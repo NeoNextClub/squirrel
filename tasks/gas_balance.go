@@ -63,7 +63,7 @@ func getGASChange(info txInfo) map[string]*big.Float {
 		}
 
 		if vinVout.AssetID == asset.GASAssetID {
-			negAmount := new(big.Float).Neg(vinVout.Value)
+			negAmount := new(big.Float).SetPrec(256).Neg(vinVout.Value)
 			updateMapValue(gasMap, vinVout.Address, negAmount)
 		}
 	}
@@ -84,11 +84,11 @@ func updateMapValue(mp map[string]*big.Float, key string, offset *big.Float) {
 
 	value, ok := mp[key]
 	if ok {
-		mp[key] = new(big.Float).Add(value, offset)
+		mp[key] = new(big.Float).SetPrec(256).Add(value, offset)
 		return
 	}
 
-	mp[key] = new(big.Float).Set(offset)
+	mp[key] = new(big.Float).SetPrec(256).Set(offset)
 }
 
 func showGasDateBalanceProgress(currentTxPK uint) {

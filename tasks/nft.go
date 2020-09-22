@@ -757,7 +757,7 @@ func queryNftAssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte) 
 	if !ok {
 		return nil, 0, false
 	}
-	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
+	totalSupply = new(big.Float).SetPrec(256).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 
 	nft := &nft.Nft{
 		AssetID:          assetID,
@@ -817,7 +817,7 @@ func queryNftCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byt
 	if !ok {
 		return big.NewFloat(0), false
 	}
-	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
+	callerBalance = new(big.Float).SetPrec(256).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
 
 	return callerBalance, true
 }
@@ -922,7 +922,7 @@ func queryNftTotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte)
 	for _, stack := range result.Stack {
 		totalSupply, ok = extractValue(stack.Value, stack.Type)
 		if ok {
-			totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
+			totalSupply = new(big.Float).SetPrec(256).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 			break
 		}
 	}
@@ -948,7 +948,7 @@ func getNftReadableValue(assetID string, balance *big.Float) *big.Float {
 		panic("Failed to get decimals of nft asset: " + assetID)
 	}
 
-	return new(big.Float).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
+	return new(big.Float).SetPrec(256).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
 }
 
 func showNftProgress(txPk uint) {

@@ -72,7 +72,7 @@ func MigrateNEP5(newAssetAdmin, oldAssetID, newAssetID string) (uint, uint) {
 
 		if old, ok := item.AddrAssetCache[getAssetAlias(oldAssetID)]; ok {
 			item.AddrAssetCache[getAssetAlias(newAssetID)] = &AddrAssetCacheItem{
-				Balance:    new(big.Float).Copy(old.Balance),
+				Balance:    new(big.Float).SetPrec(256).Copy(old.Balance),
 				BlockIndex: old.BlockIndex,
 			}
 
@@ -252,7 +252,7 @@ func (addrAssetCache *AddrAssetCacheItem) AddBalance(delta *big.Float, blockInde
 
 	addrAssetCache.BlockIndex = blockIndex
 
-	addrAssetCache.Balance = new(big.Float).Add(addrAssetCache.Balance, delta)
+	addrAssetCache.Balance = new(big.Float).SetPrec(256).Add(addrAssetCache.Balance, delta)
 	return true
 }
 
@@ -271,6 +271,6 @@ func (addrAssetCache *AddrAssetCacheItem) SubtractBalance(delta *big.Float, bloc
 
 	addrAssetCache.BlockIndex = blockIndex
 
-	addrAssetCache.Balance = new(big.Float).Sub(addrAssetCache.Balance, delta)
+	addrAssetCache.Balance = new(big.Float).SetPrec(256).Sub(addrAssetCache.Balance, delta)
 	return true
 }

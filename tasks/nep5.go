@@ -156,7 +156,7 @@ type nep5MigrateStore struct {
 }
 
 func startNep5Task() {
-	maxVal, _ = new(big.Float).SetString("99999999999999999999999999999999999.99999999")
+	maxVal, _ = new(big.Float).SetPrec(256).SetString("99999999999999999999999999999999999.99999999")
 
 	nep5AssetDecimals = db.GetNep5AssetDecimals()
 	nep5TxChan := make(chan *nep5TxInfo, nep5ChanSize)
@@ -666,7 +666,7 @@ func extractValue(val interface{}, valType string) (*big.Float, bool) {
 			return nil, false
 		}
 
-		return new(big.Float).SetInt64(v), true
+		return new(big.Float).SetPrec(256).SetInt64(v), true
 	case "ByteArray":
 		valueBytes, err := hex.DecodeString(val.(string))
 		if err != nil {
@@ -793,7 +793,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 	if !ok {
 		return nil, nil, 0, false
 	}
-	totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
+	totalSupply = new(big.Float).SetPrec(256).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 	if totalSupply.Cmp(maxVal) > 0 {
 		totalSupply = big.NewFloat(0)
 	}
@@ -803,7 +803,7 @@ func queryNep5AssetInfo(tx *tx.Transaction, scriptHash []byte, addrBytes []byte)
 		return nil, nil, 0, false
 	}
 	if adminBalance.Cmp(big.NewFloat(0)) == 1 {
-		adminBalance = new(big.Float).Quo(adminBalance, big.NewFloat(math.Pow10(int(decimals))))
+		adminBalance = new(big.Float).SetPrec(256).Quo(adminBalance, big.NewFloat(math.Pow10(int(decimals))))
 	}
 	if adminBalance.Cmp(maxVal) > 0 {
 		adminBalance = big.NewFloat(0)
@@ -895,7 +895,7 @@ func queryCallerBalance(txBlockIndex uint, blockTime uint64, scriptHash []byte, 
 	if !ok {
 		return big.NewFloat(0), false
 	}
-	callerBalance = new(big.Float).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
+	callerBalance = new(big.Float).SetPrec(256).Quo(callerBalance, big.NewFloat(math.Pow10(int(decimals))))
 	if callerBalance.Cmp(maxVal) > 0 {
 		callerBalance = big.NewFloat(0)
 	}
@@ -1006,7 +1006,7 @@ func queryNep5TotalSupply(txBlockIndex uint, blockTime uint64, scriptHash []byte
 	for _, stack := range result.Stack {
 		totalSupply, ok = extractValue(stack.Value, stack.Type)
 		if ok {
-			totalSupply = new(big.Float).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
+			totalSupply = new(big.Float).SetPrec(256).Quo(totalSupply, big.NewFloat(math.Pow10(int(decimals))))
 			break
 		}
 	}
@@ -1032,7 +1032,7 @@ func getReadableValue(assetID string, balance *big.Float) *big.Float {
 		panic("Failed to get decimals of nep5 asset: " + assetID)
 	}
 
-	return new(big.Float).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
+	return new(big.Float).SetPrec(256).Quo(balance, big.NewFloat(math.Pow10(int(decimals))))
 }
 
 func showNep5Progress(txPk uint) {
