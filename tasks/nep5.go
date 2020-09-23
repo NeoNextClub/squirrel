@@ -660,7 +660,7 @@ func getTransferValue(assetID string, val string, valType string) (*big.Float, b
 func extractValue(val interface{}, valType string) (*big.Float, bool) {
 	switch valType {
 	case "Integer":
-		v, ok := new(big.Float).SetString(val.(string))
+		v, ok := new(big.Float).SetPrec(256).SetString(val.(string))
 		return v, ok
 	case "ByteArray":
 		valueBytes, err := hex.DecodeString(val.(string))
