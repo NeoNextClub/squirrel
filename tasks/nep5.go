@@ -67,7 +67,6 @@ import (
 	"squirrel/log"
 	"squirrel/mail"
 	"squirrel/smartcontract"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -661,12 +660,8 @@ func getTransferValue(assetID string, val string, valType string) (*big.Float, b
 func extractValue(val interface{}, valType string) (*big.Float, bool) {
 	switch valType {
 	case "Integer":
-		v, err := strconv.ParseInt(val.(string), 10, 64)
-		if err != nil {
-			return nil, false
-		}
-
-		return new(big.Float).SetPrec(256).SetInt64(v), true
+		v, ok := new(big.Float).SetString(val.(string))
+		return v, ok
 	case "ByteArray":
 		valueBytes, err := hex.DecodeString(val.(string))
 		if err != nil {
