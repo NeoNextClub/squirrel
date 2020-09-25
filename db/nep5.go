@@ -182,8 +182,13 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 					return err
 				}
 			} else {
+				oldBalance := addrAssetCache.Balance
 				if addrAssetCache.UpdateBalance(balance, blockIndex) {
-					query := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.64f WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1", balance, addr, assetID)
+					query := fmt.Sprintf("UPDATE `addr_asset` SET `balance` = %.64f WHERE `address` = '%s' AND `asset_id` = '%s' LIMIT 1;", balance, addr, assetID)
+					if oldBalance.Cmp(big.NewFloat(0)) == 0 {
+						query += fmt.Sprintf("UPDATE `nep5` SET `holding_addresses` = `holding_addresses` + 1 WHERE `asset_id` = '%s' LIMIT 1;", assetID)
+					}
+
 					if _, err := tx.Exec(query); err != nil {
 						return err
 					}
