@@ -628,7 +628,7 @@ func recordNep5Transfer(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, ass
 
 	// Handle possibility of storage injection attack.
 	var totalSupply *big.Float
-	if toSc == "746f74616c537570706c79" {
+	if toSc == "746f74616c537570706c79" || tx.BlockIndex > 6200000 {
 		totalSupply, _ = queryNep5TotalSupply(tx.BlockIndex, tx.BlockTime, scriptHash)
 	}
 
