@@ -295,7 +295,10 @@ func InsertNep5transaction(trans *tx.Transaction, appLogIdx int, assetID string,
 		}
 
 		// Update nep5 transactions and addresses counter.
-		txSQL := fmt.Sprintf("UPDATE `nep5` SET `addresses` = `addresses` + %d, `holding_addresses` = `holding_addresses` + %d, `transfers` = `transfers` + 1 WHERE `asset_id` = '%s' LIMIT 1;", addrsOffset, holdingAddrsOffset, assetID)
+		txSQL := fmt.Sprintf("UPDATE `nep5` SET `addresses` = `addresses` + %d, `transfers` = `transfers` + 1 WHERE `asset_id` = '%s' LIMIT 1;", addrsOffset, assetID)
+		if holdingAddrsOffset != 0 {
+			txSQL += fmt.Sprintf("UPDATE `nep5` SET `holding_addresses` = `holding_addresses` + %d WHERE `asset_id` = '%s' AND `holding_addresses` >= %d LIMIT 1;", holdingAddrsOffset, assetID, -holdingAddrsOffset)
+		}
 
 		// Insert nep5 transaction record.
 		txSQL += fmt.Sprintf("INSERT INTO `nep5_tx` (`txid`, `asset_id`, `from`, `to`, `value`, `block_index`, `block_time`) VALUES ('%s', '%s', '%s', '%s', %.64f, %d, %d);", trans.TxID, assetID, fromAddr, toAddr, transferValue, trans.BlockIndex, trans.BlockTime)
