@@ -595,6 +595,51 @@ func handleNep5TxCall(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, notif
 		}
 
 		recordNep5Transfer(nep5StoreChan, tx, assetID, fromSc, toSc, val, valType, applogIdx)
+		scanAttrAddrBalance(nep5StoreChan, tx, assetID)
+	}
+}
+
+func scanAttrAddrBalance(nep5StoreChan chan<- *nep5Store, tx *tx.Transaction, assetID string) {
+	attrs := db.GetTxAttrs(tx.TxID)
+	if len(attrs) == 0 {
+		return
+	}
+
+	addrScriptHash := ""
+
+	for _, attr := range attrs {
+		if attr.Usage == "Script" {
+			addrScriptHash = attr.Data
+			break
+		}
+	}
+
+	if addrScriptHash == "" {
+		return
+	}
+
+	addrSC, err := hex.DecodeString(addrScriptHash)
+	if err != nil {
+		return
+	}
+
+	addr := util.GetAddressFromScriptHash(addrSC)
+	callerBalance, ok := queryCallerBalance(tx.BlockIndex, tx.BlockTime, util.GetScriptHashFromAssetID(assetID), addrSC)
+	if !ok || callerBalance.Cmp(big.NewFloat(0)) != 1 {
+		return
+	}
+
+	nep5StoreChan <- &nep5Store{
+		t: 2,
+		d: nep5BalanceTSStore{
+			txPK:        tx.ID,
+			blockTime:   tx.BlockTime,
+			blockIndex:  tx.BlockIndex,
+			addr:        addr,
+			balance:     callerBalance,
+			assetID:     assetID,
+			totalSupply: nil,
+		},
 	}
 }
 

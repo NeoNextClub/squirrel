@@ -65,6 +65,41 @@ func GetTxs(txPk uint, limit int, txType string) []*tx.Transaction {
 	return result
 }
 
+// GetTxAttrs returns attributes of a transaction.
+func GetTxAttrs(txID string) []*tx.TransactionAttribute {
+	query := []string{
+		"SELECT `id`, `txid`, `usage`, `data`",
+		"FROM `tx_attr`",
+		fmt.Sprintf("WHERE `txid` = '%s'", txID),
+	}
+
+	rows, err := wrappedQuery(strings.Join(query, " "))
+	if err != nil {
+		panic(err)
+	}
+	defer rows.Close()
+
+	attrs := []*tx.TransactionAttribute{}
+
+	for rows.Next() {
+		var attr tx.TransactionAttribute
+
+		err := rows.Scan(
+			&attr.ID,
+			&attr.TxID,
+			&attr.Usage,
+			&attr.Data,
+		)
+		if err != nil {
+			panic(err)
+		}
+
+		attrs = append(attrs, &attr)
+	}
+
+	return attrs
+}
+
 // GetVinVout returns correspond vouts of vins.
 func GetVinVout(txIDs []string) (map[string][]*tx.TransactionVin, map[string][]*tx.TransactionVout, error) {
 	vinMap, err := GetVins(txIDs)

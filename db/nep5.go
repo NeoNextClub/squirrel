@@ -221,10 +221,12 @@ func UpdateNep5TotalSupplyAndAddrAsset(blockTime uint64, blockIndex uint, addr s
 
 // UpdateNep5TotalSupply updates total supply of nep5 asset.
 func UpdateNep5TotalSupply(tx *sql.Tx, assetID string, totalSupply *big.Float) error {
+	if totalSupply == nil {
+		return nil
+	}
+
 	query := fmt.Sprintf("UPDATE `nep5` SET `total_supply` = %.64f WHERE `asset_id` = '%s' LIMIT 1", totalSupply, assetID)
-
 	_, err := tx.Exec(query)
-
 	return err
 }
 
