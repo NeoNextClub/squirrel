@@ -40,7 +40,7 @@ type scriptInfo struct {
 }
 
 func startSCTask() {
-	scTxChan := make(chan scStore)
+	scTxChan := make(chan scStore, scChanSize)
 
 	lastPk := db.GetLastTxPkForSC()
 
