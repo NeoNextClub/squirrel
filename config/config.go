@@ -172,11 +172,10 @@ func checkRPCs() error {
 
 	for _, rpc := range cfg.RPCs {
 		if strings.HasPrefix(rpc, "http") {
-			u, err := url.Parse(rpc)
+			_, err := url.Parse(rpc)
 			if err != nil {
 				return err
 			}
-			rpc = u.Host
 		}
 	}
 
