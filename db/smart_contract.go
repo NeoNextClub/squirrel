@@ -2,7 +2,6 @@ package db
 
 import (
 	"database/sql"
-	"fmt"
 	"squirrel/nep5"
 	"squirrel/util"
 )
@@ -19,7 +18,7 @@ func InsertSCInfos(scRegInfos []*nep5.RegInfo, txPK uint) error {
 
 		for _, regInfo := range scRegInfos {
 			scriptHashHex := util.GetAssetIDFromScriptHash(regInfo.ScriptHash)
-			query += fmt.Sprintf("(?, ?, ?, ?, ?, ?, ?, ?, ?, ?), ")
+			query += "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?), "
 			args = append(args, regInfo.TxID, scriptHashHex, regInfo.Name, regInfo.Version, regInfo.Author, regInfo.Email, regInfo.Description, regInfo.NeedStorage, regInfo.ParameterList, regInfo.ReturnType)
 		}
 
