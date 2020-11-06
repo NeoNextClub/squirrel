@@ -154,9 +154,11 @@ type nep5MigrateStore struct {
 	txID          string
 }
 
-func startNep5Task() {
+func init() {
 	maxVal, _ = new(big.Float).SetPrec(256).SetString("99999999999999999999999999999999999.99999999")
+}
 
+func startNep5Task() {
 	nep5AssetDecimals = db.GetNep5AssetDecimals()
 	nep5TxChan := make(chan *nep5TxInfo, nep5ChanSize)
 	applogChan := make(chan *tx.Transaction, nep5ChanSize)
