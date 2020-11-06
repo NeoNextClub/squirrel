@@ -78,7 +78,7 @@ func queryAddrGasDateRecord(addr string) (string, *big.Float) {
 	tableName := getAddrDateGasTableName(addr)
 	query := fmt.Sprintf("SELECT `date`, `balance` FROM `%s` ", tableName)
 	query += fmt.Sprintf("WHERE `address` = '%s' ", addr)
-	query += fmt.Sprintf("ORDER BY `id` DESC LIMIT 1")
+	query += "ORDER BY `id` DESC LIMIT 1"
 
 	var date string
 	var balanceStr string
