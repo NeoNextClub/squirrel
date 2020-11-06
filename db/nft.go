@@ -14,11 +14,6 @@ import (
 	"strings"
 )
 
-type nftAddrInfo struct {
-	addr    string
-	balance *big.Float
-}
-
 //GetNftInvocationTxs returns invocation transactions.
 func GetNftInvocationTxs(startPk uint, limit uint) []*tx.Transaction {
 	const query = "SELECT `id`, `block_index`, `block_time`, `txid`, `size`, `type`, `version`, `sys_fee`, `net_fee`, `nonce`, `script`, `gas` FROM `tx` WHERE `id` >= ? AND `type` = ? ORDER BY ID ASC LIMIT ?"
