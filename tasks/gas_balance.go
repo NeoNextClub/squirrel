@@ -111,6 +111,10 @@ func showGasDateBalanceProgress(currentTxPK uint) {
 		gasProgress.Finished = true
 	}
 
+	if currentTxPK > maxTxPkForGas {
+		maxTxPkForGas = currentTxPK
+	}
+
 	log.Printf("%sProgress of Addr-Date-Gas: %d/%d, %.4f%%\n",
 		gasProgress.RemainingTimeStr,
 		currentTxPK,

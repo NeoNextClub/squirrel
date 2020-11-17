@@ -164,6 +164,10 @@ func showTxProgress(currentTxPk uint) {
 		tProgress.Finished = true
 	}
 
+	if currentTxPk > maxTxPK {
+		maxTxPK = currentTxPk
+	}
+
 	log.Printf("%sProgress of transactions: %d/%d, %.4f%%\n",
 		tProgress.RemainingTimeStr,
 		currentTxPk,

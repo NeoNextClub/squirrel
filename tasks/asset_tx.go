@@ -166,6 +166,10 @@ func showAssetTxProgress(currentTxPk uint) {
 		assetProgress.Finished = true
 	}
 
+	if currentTxPk > maxTxPKforAssetTx {
+		maxTxPKforAssetTx = currentTxPk
+	}
+
 	log.Printf("%sProgress of asset tx: %d/%d, %.4f%%\n",
 		assetProgress.RemainingTimeStr,
 		currentTxPk,

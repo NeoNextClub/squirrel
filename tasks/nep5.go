@@ -1097,6 +1097,10 @@ func showNep5Progress(txPk uint) {
 		nProgress.Finished = true
 	}
 
+	if txPk > maxNep5PK {
+		maxNep5PK = txPk
+	}
+
 	log.Printf("%sProgress of nep5: %d/%d, %.4f%%\n",
 		nProgress.RemainingTimeStr,
 		txPk,

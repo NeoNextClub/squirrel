@@ -971,6 +971,10 @@ func showNftProgress(txPk uint) {
 		nftProgress.Finished = true
 	}
 
+	if txPk > maxNftPK {
+		maxNftPK = txPk
+	}
+
 	log.Printf("%sProgress of nft: %d/%d, %.4f%%\n",
 		nftProgress.RemainingTimeStr,
 		txPk,

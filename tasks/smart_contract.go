@@ -145,6 +145,10 @@ func showSCProgress(txPk uint) {
 		scProgress.Finished = true
 	}
 
+	if txPk > maxScPK {
+		maxScPK = txPk
+	}
+
 	log.Printf("%sProgress of smart contract cnt: %d/%d, %.4f%%\n",
 		scProgress.RemainingTimeStr,
 		txPk,
