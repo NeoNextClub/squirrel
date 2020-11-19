@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"squirrel/smartcontract"
 	"squirrel/util"
+	"unicode/utf8"
 )
 
 // Nft db model.
@@ -89,6 +90,10 @@ func GetNftRegInfo(txID string, opCodeDataStack *smartcontract.DataStack) (*NftR
 		Author:        string(opCodeDataStack.PopData()),
 		Email:         string(opCodeDataStack.PopData()),
 		Description:   string(opCodeDataStack.PopData()),
+	}
+
+	if !utf8.ValidString(regInfo.Description) {
+		return nil, false
 	}
 
 	return &regInfo, true
