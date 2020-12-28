@@ -11,13 +11,15 @@ import (
 
 // Run starts several goroutines for block storage, tx/nep5 tx storage, etc.
 func Run() {
+	dbHeight := db.GetLastHeight()
+	initTask(dbHeight)
+
 	log.Printf("Init addr asset cache.")
 
 	// Init cache to speed up db queries
 	addrAssetInfo := db.GetAddrAssetInfo()
 	cache.LoadAddrAssetInfo(addrAssetInfo)
-	dbHeight := db.GetLastHeight()
-	initTask(dbHeight)
+
 	for i := 0; i < config.GetGoroutines(); i++ {
 		go fetchBlock()
 	}
