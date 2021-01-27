@@ -443,7 +443,7 @@ func updateTxInfo(tx *sql.Tx, blockTime uint64, txID string, addrs []string, ass
 func GetVout(txID string, n uint16) (*tx.TransactionVout, error) {
 	vout := new(tx.TransactionVout)
 	valueStr := ""
-	const query = "SELECT `txid`, `n`, `asset_id`, `value`, `address` FROM `tx_vout` WHERE `txid` = ? AND `n` = ?"
+	const query = "SELECT `txid`, `n`, `asset_id`, `value`, `address` FROM `tx_vout` WHERE `txid` = ? AND `n` = ? LIMIT 1"
 	err := db.QueryRow(query, txID, n).Scan(
 		// &vout.ID,
 		&vout.TxID,

@@ -215,7 +215,7 @@ func InsertNftTransaction(trans *tx.Transaction, appLogIdx int, assetID string, 
 			}
 
 			var recordExists bool
-			query := "SELECT EXISTS(SELECT `id` FROM `addr_asset_nft` WHERE `address`=? AND `asset_id`=? AND `token_id`=?)"
+			query := "SELECT EXISTS(SELECT `id` FROM `addr_asset_nft` WHERE `address`=? AND `asset_id`=? AND `token_id`=? LIMIT 1)"
 			err = tx.QueryRow(query, addr, assetID, tokenID).Scan(&recordExists)
 			if err != nil {
 				return err
