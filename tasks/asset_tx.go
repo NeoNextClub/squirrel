@@ -32,7 +32,7 @@ func fetchAssetTx(assetTxChan chan<- *txInfo) {
 	nextPK := db.GetLastAssetTxPkCounter() + 1
 
 	for {
-		txs := db.GetTxs(nextPK, 50, "")
+		txs := db.GetTxs(nextPK, 20, "")
 		if len(txs) == 0 {
 			// log.Printf("Waiting for new transactions...\n")
 			time.Sleep(2 * time.Second)

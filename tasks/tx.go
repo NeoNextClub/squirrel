@@ -61,9 +61,9 @@ func fetchTx(txChan chan<- txInfo, nextPK uint) {
 	defer mail.AlertIfErr()
 
 	for {
-		txs := db.GetTxs(nextPK, 1000, "")
+		txs := db.GetTxs(nextPK, 50, "")
 		if len(txs) == 0 {
-			time.Sleep(2 * time.Second)
+			time.Sleep(3 * time.Second)
 			continue
 		}
 
